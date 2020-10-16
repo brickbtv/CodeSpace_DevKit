@@ -14,6 +14,8 @@ REGISTERS = {
     'EX': 0x1d,
 }
 
+BIN2REGISTERS = {v: k for k, v in REGISTERS.items()}
+
 LITERAL = {
     -1: 0x20,
     **{i: 0x21 + i for i in range(31)}
