@@ -229,7 +229,7 @@ DAT "Hardware 0-7 expected to be     thrusters. Halting.", 0
 :str_no_keyboard_message
 DAT "No keyboard found. Halting.", 0
 :str_ready_message
-DAT "Steer ship with WASD + QE       Ensure this window has focus.", 0
+DAT "Homemade translator test           Must boot                          test change   123456789", 0
 
 :keys_changed
 DAT 0x0000
