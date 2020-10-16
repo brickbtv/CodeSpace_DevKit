@@ -20,8 +20,6 @@ class InstructionType(Enum):
             return InstructionType.SPECIAL
 
 class Decoder:
-    def is_instruction_basic(self, code) -> bool:
-        return (code & 0x1f) != 0
 
     def gen_instructions(self, filename):
         pc = 0
@@ -64,15 +62,8 @@ class Decoder:
                 yield pc, code, cmd, operand_b, operand_a, nw2, nw1
                 code = f.read(2)
 
-    def decode(self, filename):
-        for pc, code, cmd, op_b, op_a, nw_b, nw_a in self.gen_instructions(filename):
-            if cmd == 'DAT':
-                self.print_dat(code, pc)
-                continue
-
-            self.print_instruction(cmd, code, nw_a, nw_b, op_a, op_b, pc)
-
-    def print_instruction(self, cmd, code, nw_a, nw_b, op_a, op_b, pc):
+    @staticmethod
+    def print_instruction(cmd, code, nw_a, nw_b, op_a, op_b, pc):
         ops = ''
         ops += '0x{:02x} '.format(op_b) if op_b else ''
         ops += '0x{:02x}'.format(op_a) if op_a else ''
@@ -88,12 +79,21 @@ class Decoder:
             cmd, ops, next_words,
         )
 
-    def print_dat(self, code, pc):
+    @staticmethod
+    def print_dat(code, pc):
         print(
             '0x{:04x}'.format(pc),
             '0x{:04x} 0x{:016b}'.format(code, code),
             chr(code) if code >= ord(' ') else '0x{:02x}'.format(code)
         )
+
+    def decode_and_print(self, filename):
+        for pc, code, cmd, op_b, op_a, nw_b, nw_a in self.gen_instructions(filename):
+            if cmd == 'DAT':
+                self.print_dat(code, pc)
+                continue
+
+            self.print_instruction(cmd, code, nw_a, nw_b, op_a, op_b, pc)
 
 
 if __name__ == '__main__':
@@ -103,4 +103,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     d = Decoder()
-    d.decode(args.filename)
+    d.decode_and_print(args.filename)
