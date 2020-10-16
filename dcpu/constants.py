@@ -90,7 +90,7 @@ SPECIAL_MNEMONICS_TO_CODE = {
 }
 
 BIN2OPCODE = {v: k for k, v in MNEMONIC_TO_CODE.items()}
-BON2SPECTIAL = {v: k for k, v in SPECIAL_MNEMONICS_TO_CODE.items()}
+BIN2SPECTIAL = {v: k for k, v in SPECIAL_MNEMONICS_TO_CODE.items()}
 
 
 TESTSET = [

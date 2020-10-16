@@ -103,8 +103,6 @@ class DCPUTranslator:
     def asm2bin(self, filename):
         relocations, _ = self.translate(filename, relocations_info=None)
         _, program = self.translate(filename, relocations_info=relocations)
-        # from pprint import pprint
-        # pprint(relocations)
 
         return program
 
