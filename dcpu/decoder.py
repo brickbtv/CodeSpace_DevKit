@@ -1,7 +1,7 @@
 import argparse
 from enum import Enum
 
-from constants import BIN2OPCODE, BIN2SPECTIAL, BIN2REGISTERS
+from constants import BIN2OPCODE, BIN2SPECTIAL
 
 
 class InstructionType(Enum):
@@ -20,6 +20,44 @@ class InstructionType(Enum):
             return InstructionType.SPECIAL
 
 class Decoder:
+
+    def describe_instruction(self, code):
+        instruction_type = InstructionType.determine(code)
+
+        if instruction_type is InstructionType.BASIC:
+            opcode = code & 0x1f
+            operand_b = (code & 0x3e0) >> 5
+            operand_a = (code & 0xfc00) >> 10
+
+            cmd = BIN2OPCODE[opcode]
+
+        elif instruction_type is InstructionType.SPECIAL:
+            opcode = (code & 0x3e0) >> 5
+            operand_b = None
+            operand_a = (code & 0xfc00) >> 10
+
+            cmd = BIN2SPECTIAL[opcode]
+        else:
+            raise Exception
+
+        nw1 = nw2 = False
+
+        if instruction_type is InstructionType.BASIC and operand_b == 0x1e:
+            nw2 = True
+
+        if operand_a == 0x1f:
+            nw1 = True
+
+        return cmd, operand_b, operand_a, nw2, nw1
+
+    def gen_loader(self, filename):
+        pc = 0
+        with open(filename, 'rb') as f:
+            code = f.read(2)
+            while code:
+                yield pc, int.from_bytes(code, "little")
+                code = f.read(2)
+                pc += 1
 
     def gen_instructions(self, filename):
         pc = 0
