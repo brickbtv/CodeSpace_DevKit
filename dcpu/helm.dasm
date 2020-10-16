@@ -1,0 +1,262 @@
+; Simple helm
+; TH++ 2020
+
+; assumes hardware ids 0-7 be
+; 0: rear thruster (left)
+; 1: rear thruster (right)
+; 2: front thruster (left)
+; 3: front thruster (right)
+; 4: left thruster (front)
+; 5: left thruster (back)
+; 6: right thruster (front)
+; 7: right thruster (back)
+; also requires LEM1802 and Generic Keyboard
+
+:start
+SET [keyboard_hwid], 0xffff
+SET [screen_hwid], 0xffff
+JSR clear_screen
+
+
+; Check and setup monitor/keyboard
+; ==============================
+HWN J
+SET I, 0
+:iterate_hw
+HWQ I
+IFE B, 0x30cf
+IFE A, 0x7406
+	SET [keyboard_hwid], I
+IFE B, 0x7349
+IFE A, 0xf615
+	SET [screen_hwid], I
+ADD I, 1
+IFL I, J
+	SET PC, iterate_hw
+
+:check_hw
+IFE [screen_hwid], 0xffff
+	SET PC, catch_fire
+IFN [keyboard_hwid], 0xffff
+	SET PC, setup_hw
+SET A, str_no_keyboard_message
+JSR write_string
+SET PC, catch_fire
+
+:setup_hw
+SET A, 0
+SET B, screen_data
+HWI [screen_hwid]
+SET A, 3
+SET B, 1
+HWI [screen_hwid]
+
+SET A, 3
+SET B, [keyboard_msg]
+HWI [keyboard_hwid]
+SET A, 0
+HWI [keyboard_hwid]
+
+
+; Check thrusters
+; ==============================
+HWN J
+IFL J, 8
+	SET PC, no_thrusters
+	
+SET I, 0
+:iterate_thruster_hw_loop
+IFE I, 8
+	SET PC, take_off
+HWQ I
+ADD I, 1
+IFE B, 0xa474
+IFE A, 0x8683
+	SET PC, iterate_thruster_hw_loop
+	
+:no_thrusters
+SET A, str_no_thruster_message
+JSR write_string
+SET PC, catch_fire
+
+
+; Ready to go
+; ==============================
+:take_off
+IAS irq_handler
+JSR clear_screen
+SET A, str_ready_message
+JSR write_string
+
+
+; Main loop
+; ==============================
+SET [keys_changed], 1
+:wait_for_key_loop
+IFE [keys_changed], 0
+	SET PC, wait_for_key_loop
+
+SET [keys_changed], 0
+SET I, 0
+SET A, 2
+:key_update_loop
+SET B, [I + keys]
+HWI [keyboard_hwid]
+SET [I + keys_down], C
+ADD I, 1
+IFL I, 6
+	SET PC, key_update_loop
+
+; 0: W
+; 1: W
+; 2: S
+; 3: S
+; 4: D | E
+; 5: D | Q
+; 6: A | Q
+; 7: A | E
+
+SET A, 0
+; 0
+; 1
+SET B, 0
+IFE [key_w_down], 1
+SET B, 255
+HWI 0
+HWI 1
+; 2
+; 3
+SET B, 0
+IFE [key_s_down], 1
+SET B, 255
+HWI 2
+HWI 3
+; 4
+SET B, 0
+IFE [key_d_down], 1
+SET B, 255
+IFE [key_e_down], 1
+SET B, 255
+HWI 4
+; 5
+SET B, 0
+IFE [key_d_down], 1
+SET B, 255
+IFE [key_q_down], 1
+SET B, 255
+HWI 5
+; 6
+SET B, 0
+IFE [key_a_down], 1
+SET B, 255
+IFE [key_q_down], 1
+SET B, 255
+HWI 6
+; 7
+SET B, 0
+IFE [key_a_down], 1
+SET B, 255
+IFE [key_e_down], 1
+SET B, 255
+HWI 7
+
+SET PC, wait_for_key_loop
+
+
+; Interrupt handler
+; ==============================
+:irq_handler
+IFE A, [keyboard_msg] 
+	JSR keyboard_irq_handler
+RFI 0
+
+:keyboard_irq_handler
+SET [keys_changed], 1
+SET PC, POP
+
+
+; Support routines
+; ==============================
+:clear_screen
+SET PUSH, I
+SET PUSH, J
+SET I, screen_data
+SET J, 0x180
+ADD J, I
+:clear_screen_loop
+SET [I], 0x20
+ADD I, 1
+IFN I, J
+	SET PC, clear_screen_loop
+SET J, POP
+SET I, POP
+SET PC, POP
+
+:write_string
+SET PUSH, I
+SET PUSH, J
+SET PUSH, B
+SET I, screen_data
+SET J, A
+:write_string_loop
+SET B, [J]
+BOR B, 0x7000
+SET [I], B
+ADD I, 1
+ADD J, 1
+IFN [J], 0
+	SET PC, write_string_loop
+SET B, POP
+SET J, POP
+SET I, POP
+SET PC, POP
+
+:catch_fire
+DAT 0x0000
+
+
+; Memory
+; ==============================
+:keyboard_hwid
+DAT 0x0000
+:keyboard_msg
+DAT 0x0001
+:screen_hwid
+DAT 0x0000
+
+:str_no_thruster_message
+DAT "Hardware 0-7 expected to be     thrusters. Halting.", 0
+:str_no_keyboard_message
+DAT "No keyboard found. Halting.", 0
+:str_ready_message
+DAT "Steer ship with WASD + QE       Ensure this window has focus.", 0
+
+:keys_changed
+DAT 0x0000
+
+:keys
+DAT 'w'
+DAT 'a'
+DAT 's'
+DAT 'd'
+DAT 'q'
+DAT 'e'
+
+:keys_down
+:key_w_down
+DAT 0x0000
+:key_a_down
+DAT 0x0000
+:key_s_down
+DAT 0x0000
+:key_d_down
+DAT 0x0000
+:key_q_down
+DAT 0x0000
+:key_e_down
+DAT 0x0000
+
+:screen_data
+DAT "                                                                                                                                "
+DAT "                                                                                                                                "
+DAT "                                                                                                                                "
