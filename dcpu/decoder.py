@@ -45,7 +45,7 @@ class Decoder:
         if instruction_type is InstructionType.BASIC and operand_b == 0x1e:
             nw2 = True
 
-        if operand_a == 0x1f:
+        if operand_a == 0x1f or operand_a == 0x1e:
             nw1 = True
 
         return cmd, operand_b, operand_a, nw2, nw1

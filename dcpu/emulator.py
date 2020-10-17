@@ -16,7 +16,7 @@ class Instruction:
         self.code = code
         self.cmd = cmd
         self.A = Operator(op_a, nw_a)
-        self.B = Operator(op_b, nw_b) if op_b else None
+        self.B = Operator(op_b, nw_b) if op_b is not None else None
 
 
 class Registers:
@@ -71,6 +71,51 @@ class RAM:
         self._ram[key] = value
 
 
+class Hardware:
+    ID = None
+    VERSION = None
+    VENDOR = None
+
+    def interrupt(self, regs: Registers):
+        raise NotImplemented
+
+
+class Display(Hardware):
+    """LEM1802"""
+    ID = 0x7349f615
+    VERSION = 0x1802
+    VENDOR = 0x1c6c8b36
+
+
+class Keyboard(Hardware):
+    """"""
+    ID = 0x30cf7406
+    VERSION = 0x1
+    VENDOR = 0x0
+
+    def __init__(self):
+        self.buffer = ''
+
+    def interrupt(self, regs):
+        code = regs.A
+        if code == 0:
+            self.buffer = ''
+        elif code == 1:
+            if self.buffer:
+                regs.C = self.buffer[0]
+                self.buffer = self.buffer[1:]
+            else:
+                regs.C = 0
+        elif code == 2:
+            if self.buffer and self.buffer[0] == regs.B:
+                regs.C = 1
+                self.buffer = self.buffer[1:]
+            else:
+                regs.C = 0
+        elif code == 3:
+            raise NotImplemented
+
+
 class Emulator:
     def __init__(self, debug):
         self._debug = debug
@@ -79,8 +124,9 @@ class Emulator:
         self.ram = RAM(False)
         self.regs = Registers()
         self.regs.SP = 0xffff+1
+        self.hardware = [Keyboard(), Display()]
 
-    def gen_instrucions(self):
+    def gen_instructions(self):
         while True:
             code = self.ram[self.regs.PC]
             cmd, op_b, op_a, nw_b, nw_a = self.decoder.describe_instruction(code)
@@ -101,12 +147,12 @@ class Emulator:
             self.ram[pc] = code
         print('Loading done.')
 
-        for instruction in self.gen_instrucions():
+        for instruction in self.gen_instructions():
             if self._debug:
                 self.decoder.print_instruction(instruction, self.regs.PC)
 
-            value_b = self.get_value_from_op(instruction.B, is_a=False)
-            value_a = self.get_value_from_op(instruction.A, is_a=True)
+            value_b = self.get_value_from_op(instruction.B, do_pop=False)
+            value_a = self.get_value_from_op(instruction.A, do_pop=True)
 
             do_not_inc_pc = self.exec_instruction(instruction, value_b, value_a)
 
@@ -164,22 +210,22 @@ class Emulator:
             self.set(instruction.B, value=value_b << value_a)
 
         elif cmd == 'IFB':
-            if value_a & value_b == 0:
+            if value_b & value_a == 0:
                 self.skip_next_instruction()
         elif cmd == 'IFB':
-            if value_a & value_b != 0:
+            if value_b & value_a != 0:
                 self.skip_next_instruction()
         elif cmd == 'IFE':
-            if value_a != value_b:
+            if value_b != value_a:
                 self.skip_next_instruction()
         elif cmd == 'IFN':
-            if value_a == value_b:
+            if value_b == value_a:
                 self.skip_next_instruction()
         elif cmd == 'IFG' or cmd == 'IFA':
-            if value_a <= value_b:
+            if value_b <= value_a:
                 self.skip_next_instruction()
         elif cmd == 'IFL' or cmd == 'IFU':
-            if value_a >= value_b:
+            if value_b >= value_a:
                 self.skip_next_instruction()
 
         elif cmd == 'ADX':
@@ -227,14 +273,22 @@ class Emulator:
             print(' ** todo **')
             pass
         elif cmd == 'HWN':
-            print(' ** todo **')
-            pass
+            self.set(instruction.A, value=len(self.hardware))
         elif cmd == 'HWQ':
-            print(' ** todo **')
-            pass
+            hwnum = value_a
+            hwid = self.hardware[hwnum].ID
+            vendor = self.hardware[hwnum].VENDOR
+
+            self.regs.A = hwid & 0xffff
+            self.regs.B = hwid >> 16
+
+            self.regs.C = self.hardware[hwnum].VERSION
+            self.regs.X = vendor & 0xffff
+            self.regs.Y = vendor >> 16
         elif cmd == 'HWI':
-            print(' ** todo **')
-            pass
+            hwnum = value_a
+            device = self.hardware[hwnum]
+            device.interrupt(self.regs)
         else:
             raise Exception
         return do_not_inc_pc
@@ -249,6 +303,9 @@ class Emulator:
             skip += 1
 
         self.regs.PC += skip
+
+        if cmd.startswith('IF'):
+            self.skip_next_instruction()
 
     def set(self, operator: Operator, value=None):
         op = operator.op
@@ -274,7 +331,7 @@ class Emulator:
         else:
             raise Exception
 
-    def get_value_from_op(self, operator, is_a=False):
+    def get_value_from_op(self, operator, do_pop=False):
         if operator is None:
             return None
 
@@ -288,7 +345,7 @@ class Emulator:
         elif 0x10 <= op <= 0x17:
             return self.ram[self.regs[BIN2REGISTERS[op - 0x10] + nw]]
         elif op == 0x18:
-            return self.pop() if is_a else None
+            return self.pop() if do_pop else None
         elif op == 0x19:
             return self.peek()
         elif op == 0x1a:
