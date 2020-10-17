@@ -11,8 +11,8 @@ class InstructionType(Enum):
 
     @staticmethod
     def determine(code):
-        if (code & 0xff00) >> 8 == 0:
-            return InstructionType.DATA
+        # if (code & 0xff00) >> 8 == 0:
+        #     return InstructionType.DATA
 
         if (code & 0x1f) != 0:
             return InstructionType.BASIC
@@ -45,7 +45,7 @@ class Decoder:
         if instruction_type is InstructionType.BASIC and operand_b == 0x1e:
             nw2 = True
 
-        if operand_a == 0x1f or operand_a == 0x1e:
+        if operand_a in {0x1a, 0x1f, 0x1e} or 0x10 <= operand_a <= 0x17:
             nw1 = True
 
         return cmd, operand_b, operand_a, nw2, nw1

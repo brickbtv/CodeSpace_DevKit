@@ -76,7 +76,11 @@ class Hardware:
     VERSION = None
     VENDOR = None
 
-    def interrupt(self, regs: Registers):
+    def __init__(self, regs: Registers, ram: RAM):
+        self.regs = regs
+        self.ram = ram
+
+    def interrupt(self):
         raise NotImplemented
 
 
@@ -86,6 +90,39 @@ class Display(Hardware):
     VERSION = 0x1802
     VENDOR = 0x1c6c8b36
 
+    def __init__(self, regs: Registers, ram: RAM):
+        super().__init__(regs, ram)
+        self.vram = 0
+        self.fram = 0
+        self.pram = 0
+        self.border_color = 0
+
+    def interrupt(self):
+        code = self.regs.A
+
+        if code == 0:
+            self.vram = self.regs.B
+        elif code == 1:
+            self.fram = self.regs.B
+        elif code == 2:
+            self.pram = self.regs.B
+        elif code == 3:
+            self.border_color = self.regs.B
+        elif code == 4:
+            raise NotImplemented
+        elif code == 5:
+            raise NotImplemented
+        else:
+            raise Exception
+
+    def dump(self):
+        print('-'*32)
+        for y in range(12):
+            for x in range(32):
+                data = self.ram[self.vram + x + y*32]
+                print(chr(data & 0xff), end='')
+            print()
+        print('-'*32)
 
 class Keyboard(Hardware):
     """"""
@@ -93,27 +130,50 @@ class Keyboard(Hardware):
     VERSION = 0x1
     VENDOR = 0x0
 
-    def __init__(self):
+    def __init__(self, regs: Registers, ram: RAM):
+        super().__init__(regs, ram)
         self.buffer = ''
+        self.irq_enabled = False
+        self.irq_code = None
 
-    def interrupt(self, regs):
-        code = regs.A
+    def interrupt(self):
+        code = self.regs.A
         if code == 0:
             self.buffer = ''
         elif code == 1:
             if self.buffer:
-                regs.C = self.buffer[0]
+                self.regs.C = self.buffer[0]
                 self.buffer = self.buffer[1:]
             else:
-                regs.C = 0
+                self.regs.C = 0
         elif code == 2:
-            if self.buffer and self.buffer[0] == regs.B:
-                regs.C = 1
+            if self.buffer and self.buffer[0] == self.regs.B:
+                self.regs.C = 1
                 self.buffer = self.buffer[1:]
             else:
-                regs.C = 0
+                self.regs.C = 0
         elif code == 3:
-            raise NotImplemented
+            if self.regs.B == 0:
+                self.irq_enabled = False
+                self.irq_code = None
+            else:
+                self.irq_enabled = True
+                self.irq_code = self.regs.B
+
+
+class Thruster(Hardware):
+    ID = 0xa4748683
+    VERSION = 0x0001
+    VENDOR = 0x54482b2b
+
+    def __init__(self, regs: Registers, ram: RAM):
+        super().__init__(regs, ram)
+        self.power = 0
+
+    def interrupt(self):
+        code = self.regs.A
+        if code == 0:
+            self.power = self.regs.B & 0xf
 
 
 class Emulator:
@@ -124,11 +184,16 @@ class Emulator:
         self.ram = RAM(False)
         self.regs = Registers()
         self.regs.SP = 0xffff+1
-        self.hardware = [Keyboard(), Display()]
+        self.hardware = [Thruster(self.regs, self.ram) for i in range(8)]
+
+        self.hardware.extend([Keyboard(self.regs, self.ram), Display(self.regs, self.ram)])
 
     def gen_instructions(self):
         while True:
             code = self.ram[self.regs.PC]
+            if code == 0:
+                break
+
             cmd, op_b, op_a, nw_b, nw_a = self.decoder.describe_instruction(code)
 
             if nw_a is True:
@@ -151,16 +216,21 @@ class Emulator:
             if self._debug:
                 self.decoder.print_instruction(instruction, self.regs.PC)
 
-            value_b = self.get_value_from_op(instruction.B, do_pop=False)
-            value_a = self.get_value_from_op(instruction.A, do_pop=True)
+            try:
+                value_b = self.get_value_from_op(instruction.B, do_pop=False)
+                value_a = self.get_value_from_op(instruction.A, do_pop=True)
+            except:
+                raise
 
             do_not_inc_pc = self.exec_instruction(instruction, value_b, value_a)
 
-            if self._debug:
-                print(self.regs)
+            # if self._debug:
+            #     print(self.regs)
 
             if do_not_inc_pc is False:
                 self.regs.PC += 1
+
+            self.hardware[-1].dump()
 
     def exec_instruction(self, instruction, value_b, value_a):
         cmd = instruction.cmd
@@ -288,7 +358,7 @@ class Emulator:
         elif cmd == 'HWI':
             hwnum = value_a
             device = self.hardware[hwnum]
-            device.interrupt(self.regs)
+            device.interrupt()
         else:
             raise Exception
         return do_not_inc_pc
@@ -315,7 +385,7 @@ class Emulator:
         elif 0x08 <= op <= 0x0f:
             self.ram[self.regs[BIN2REGISTERS[op - 0x08]]] = value
         elif 0x10 <= op <= 0x17:
-            self.ram[self.regs[BIN2REGISTERS[op - 0x10] + nw]] = value
+            self.ram[self.regs[BIN2REGISTERS[op - 0x10]] + nw] = value
         elif op == 0x18:
             self.push(value)
         elif op == 0x19:
@@ -343,7 +413,7 @@ class Emulator:
         elif 0x08 <= op <= 0x0f:
             return self.ram[self.regs[BIN2REGISTERS[op - 0x08]]]
         elif 0x10 <= op <= 0x17:
-            return self.ram[self.regs[BIN2REGISTERS[op - 0x10] + nw]]
+            return self.ram[self.regs[BIN2REGISTERS[op - 0x10]] + nw]
         elif op == 0x18:
             return self.pop() if do_pop else None
         elif op == 0x19:
