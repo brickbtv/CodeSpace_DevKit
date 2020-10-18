@@ -3,20 +3,7 @@ from collections import defaultdict
 
 from constants import BIN2REGISTERS
 from decoder import Decoder
-
-
-class Operator:
-    def __init__(self, op, nw):
-        self.op = op
-        self.nw = nw
-
-
-class Instruction:
-    def __init__(self, code, cmd, op_b, nw_b, op_a, nw_a):
-        self.code = code
-        self.cmd = cmd
-        self.A = Operator(op_a, nw_a)
-        self.B = Operator(op_b, nw_b) if op_b is not None else None
+from instuction import Operator, Instruction
 
 
 class Registers:
@@ -207,6 +194,13 @@ class Emulator:
             yield Instruction(code, cmd, op_b, nw_b, op_a, nw_a)
 
     def run(self, filename):
+        for step in self.step_run(filename):
+            if self._debug:
+                print(self.regs)
+
+            self.hardware[-1].dump()
+
+    def step_run(self, filename):
         print('Loading program to RAM...')
         for pc, code in self.decoder.gen_loader(filename):
             self.ram[pc] = code
@@ -214,7 +208,7 @@ class Emulator:
 
         for instruction in self.gen_instructions():
             if self._debug:
-                self.decoder.print_instruction(instruction, self.regs.PC)
+                print(self.decoder.print_instruction(instruction, self.regs.PC))
 
             try:
                 value_b = self.get_value_from_op(instruction.B, do_pop=False)
@@ -224,13 +218,11 @@ class Emulator:
 
             do_not_inc_pc = self.exec_instruction(instruction, value_b, value_a)
 
-            # if self._debug:
-            #     print(self.regs)
-
             if do_not_inc_pc is False:
                 self.regs.PC += 1
 
-            self.hardware[-1].dump()
+            yield self.regs.PC
+
 
     def exec_instruction(self, instruction, value_b, value_a):
         cmd = instruction.cmd

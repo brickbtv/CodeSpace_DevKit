@@ -2,6 +2,7 @@ import argparse
 from enum import Enum
 
 from constants import BIN2OPCODE, BIN2SPECTIAL, BIN2REGISTERS
+from instuction import Instruction
 
 
 class InstructionType(Enum):
@@ -10,9 +11,10 @@ class InstructionType(Enum):
     DATA = 3
 
     @staticmethod
-    def determine(code):
-        # if (code & 0xff00) >> 8 == 0:
-        #     return InstructionType.DATA
+    def determine(code, exec_mode=False):
+        if exec_mode is False:
+            if (code & 0xff00) >> 8 == 0:
+                 return InstructionType.DATA
 
         if (code & 0x1f) != 0:
             return InstructionType.BASIC
@@ -22,7 +24,7 @@ class InstructionType(Enum):
 
 class Decoder:
     def describe_instruction(self, code):
-        instruction_type = InstructionType.determine(code)
+        instruction_type = InstructionType.determine(code, exec_mode=True)
 
         if instruction_type is InstructionType.BASIC:
             opcode = code & 0x1f
@@ -42,7 +44,7 @@ class Decoder:
 
         nw1 = nw2 = False
 
-        if instruction_type is InstructionType.BASIC and operand_b == 0x1e:
+        if instruction_type is InstructionType.BASIC and (operand_b == 0x1e or 0x10 <= operand_b <= 0x17):
             nw2 = True
 
         if operand_a in {0x1a, 0x1f, 0x1e} or 0x10 <= operand_a <= 0x17:
@@ -82,26 +84,32 @@ class Decoder:
 
                     cmd = BIN2SPECTIAL[opcode]
                 elif instruction_type is InstructionType.DATA:
-                    yield pc, code, 'DAT', None, None, None, None
+                    yield pc, Instruction(code, 'DAT', None, None, None, None)
                     pc += 1
                     code = f.read(2)
                     continue
 
                 nw1 = nw2 = None
 
-                if instruction_type is InstructionType.BASIC and operand_b == 0x1e:
-                    pc += 1
-                    nw2 = int.from_bytes(f.read(2), "little")
+                orig_pc = pc
 
-                if operand_a == 0x1f:
+                if operand_a in {0x1a, 0x1f, 0x1e} or 0x10 <= operand_a <= 0x17:
                     pc += 1
                     nw1 = int.from_bytes(f.read(2), "little")
 
-                yield pc, code, cmd, operand_b, operand_a, nw2, nw1
+                if instruction_type is InstructionType.BASIC and (operand_b == 0x1e or 0x10 <= operand_b <= 0x17):
+                    pc += 1
+                    nw2 = int.from_bytes(f.read(2), "little")
+
+                yield orig_pc, Instruction(code, cmd, operand_b, nw2, operand_a, nw1)
+                pc += 1
                 code = f.read(2)
 
     @staticmethod
-    def print_instruction(instruction, pc):
+    def print_instruction(instruction, pc, extended=True):
+
+        if instruction.cmd == 'DAT':
+            return Decoder.print_dat(instruction.code, pc, extended)
 
         ops = ''
         for operator, is_a in [
@@ -137,27 +145,28 @@ class Decoder:
 
             ops += value + ' '
 
-        print(
-            '0x{:04x}'.format(pc),
-            '0x{:04x} 0x{:016b}'.format(instruction.code, instruction.code),
-            instruction.cmd, ops
-        )
+        code = instruction.code
+
+        prefix = ''
+        if extended:
+            prefix = f'0x{pc:04x} 0x{code:04x} 0x{code:016b}'
+        return f'{prefix} {instruction.cmd} {ops}'
 
     @staticmethod
-    def print_dat(code, pc):
-        print(
-            '0x{:04x}'.format(pc),
-            '0x{:04x} 0x{:016b}'.format(code, code),
-            chr(code) if code >= ord(' ') else '0x{:02x}'.format(code)
-        )
+    def print_dat(code, pc, extended=True):
+        data = chr(code) if code >= ord(' ') else f'0x{code:02x}'
+        prefix = ''
+        if extended:
+            prefix = f'0x{pc:04x} 0x{code:04x} 0x{code:016b}'
+        return f'{prefix} {data}'
 
     def decode_and_print(self, filename):
-        for pc, code, cmd, op_b, op_a, nw_b, nw_a in self.gen_instructions(filename):
-            if cmd == 'DAT':
-                self.print_dat(code, pc)
+        for pc, instruction in self.gen_instructions(filename):
+            if instruction.cmd == 'DAT':
+                print(self.print_dat(instruction.code, pc))
                 continue
 
-            self.print_instruction(cmd, code, nw_a, nw_b, op_a, op_b, pc)
+            print(self.print_instruction(instruction, pc))
 
 
 if __name__ == '__main__':
