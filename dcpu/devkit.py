@@ -49,7 +49,7 @@ class EmulatorThread(QtCore.QThread):
                 item = self.registers_view.item(i, 0)
                 item.setText(f'0x{self.emulator.regs[reg]:04x}')
 
-            time.sleep(0.9)
+            time.sleep(0.1)
 
 
 class DevKitApp(QtWidgets.QMainWindow, emulator_ui.Ui_MainWindow):

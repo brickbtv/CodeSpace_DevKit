@@ -177,6 +177,7 @@ class Emulator:
 
     def gen_instructions(self):
         while True:
+            origin_pc = self.regs.PC
             code = self.ram[self.regs.PC]
             if code == 0:
                 break
@@ -191,7 +192,7 @@ class Emulator:
                 self.regs.PC += 1
                 nw_b = self.ram[self.regs.PC]
 
-            yield Instruction(code, cmd, op_b, nw_b, op_a, nw_a)
+            yield origin_pc, Instruction(code, cmd, op_b, nw_b, op_a, nw_a)
 
     def run(self, filename):
         for step in self.step_run(filename):
@@ -206,9 +207,9 @@ class Emulator:
             self.ram[pc] = code
         print('Loading done.')
 
-        for instruction in self.gen_instructions():
+        for pc, instruction in self.gen_instructions():
             if self._debug:
-                print(self.decoder.print_instruction(instruction, self.regs.PC))
+                print(self.decoder.print_instruction(instruction, pc))
 
             try:
                 value_b = self.get_value_from_op(instruction.B, do_pop=False)
@@ -221,8 +222,7 @@ class Emulator:
             if do_not_inc_pc is False:
                 self.regs.PC += 1
 
-            yield self.regs.PC
-
+            yield pc
 
     def exec_instruction(self, instruction, value_b, value_a):
         cmd = instruction.cmd
