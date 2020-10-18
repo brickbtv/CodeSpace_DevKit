@@ -6,9 +6,8 @@ from PyQt5.QtCore import QPoint
 from PyQt5.QtGui import QTextCursor
 
 from decoder import Decoder
-from instuction import Instruction
 from emulator import Emulator
-import emulator_ui
+import devkit_ui
 
 from devkit_code_editor import QCodeEditor
 
@@ -52,7 +51,7 @@ class EmulatorThread(QtCore.QThread):
             time.sleep(0.1)
 
 
-class DevKitApp(QtWidgets.QMainWindow, emulator_ui.Ui_MainWindow):
+class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)

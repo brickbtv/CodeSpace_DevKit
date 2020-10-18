@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'emulator.ui'
+# Form implementation generated from reading ui file 'devkit.ui'
 #
 # Created by: PyQt5 UI code generator 5.14.1
 #
@@ -87,6 +87,9 @@ class Ui_MainWindow(object):
         self.registers.setItem(10, 0, item)
         item = QtWidgets.QTableWidgetItem()
         self.registers.setItem(11, 0, item)
+        self.registers.horizontalHeader().setDefaultSectionSize(110)
+        self.registers.horizontalHeader().setMinimumSectionSize(46)
+        self.registers.verticalHeader().setDefaultSectionSize(20)
         self.verticalLayout.addWidget(self.registers)
         self.horizontalLayout.addLayout(self.verticalLayout)
         MainWindow.setCentralWidget(self.centralwidget)
