@@ -69,6 +69,8 @@ class Keyboard(Hardware):
         self.irq_enabled = False
         self.irq_code = None
         self.int_counter = 0
+        self.interruptions = []
+        self.pressed = set()
 
     def interrupt(self):
         code = self.regs.A
@@ -81,9 +83,8 @@ class Keyboard(Hardware):
             else:
                 self.regs.C = 0
         elif code == 2:
-            if self.buffer and self.buffer[0] == self.regs.B:
+            if self.regs.B in self.pressed:
                 self.regs.C = 1
-                self.buffer = self.buffer[1:]
             else:
                 self.regs.C = 0
         elif code == 3:
@@ -94,12 +95,16 @@ class Keyboard(Hardware):
                 self.irq_enabled = True
                 self.irq_code = self.regs.B
 
-    def add_key(self, key):
-        if key:
+    def add_key(self, key, pressed: bool):
+        if pressed:
             self.buffer.append(key)
+            self.pressed.add(key)
+        else:
+            if key in self.pressed:
+                self.pressed.remove(key)
 
         if self.irq_enabled:
-            self.int_counter += 1
+            self.interruptions.append(self.irq_code)
 
 
 class Thruster(Hardware):
@@ -116,3 +121,40 @@ class Thruster(Hardware):
         if code == 0:
             self.power = self.regs.B & 0xff
             # print(self.power)
+
+
+class Sensor(Hardware):
+    ID = 0x1F12E306
+    VERSION = 0x0001
+    VENDOR = 0x54482B2B
+
+    def __init__(self, regs: 'Registers', ram: 'RAM'):
+        super().__init__(regs, ram)
+        self.contacts = []
+
+    def interrupt(self):
+        code = self.regs.A
+        if code == 1:
+            self.contacts = [{
+                'type': 0x0003,
+                'size': 0x000c,
+                'angle': 0x1FFF,
+                'range': 0x0100,
+            }, {
+                'type': 0x0201,
+                'size': 0x000c,
+                'angle': 0x1FFF,
+                'range': 0x0100,
+            }]
+        elif code == 0:
+            try:
+                contact = self.contacts.pop()
+                self.regs.B = contact['type']
+                self.regs.X = contact['angle']
+                self.regs.Y = contact['range']
+                self.regs.Z = contact['size']
+            except IndexError:
+                self.regs.B = 0
+                self.regs.X = 0
+                self.regs.Y = 0
+                self.regs.Z = 0

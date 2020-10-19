@@ -3,7 +3,7 @@ from collections import defaultdict
 
 from constants import BIN2REGISTERS
 from decoder import Decoder
-from hardware import Display, Keyboard, Thruster
+from hardware import Display, Keyboard, Thruster, Sensor
 from instuction import Operator, Instruction
 
 
@@ -69,19 +69,20 @@ class Emulator:
         self.regs.SP = 0xffff+1
         self.hardware = []
         self.hardware.extend([Thruster(self.regs, self.ram) for _ in range(8)])
+        self.hardware.extend([Sensor(self.regs, self.ram)])
         self.hardware.extend([Keyboard(self.regs, self.ram), Display(self.regs, self.ram)])
+        self.on_interruption = False
 
     def gen_instructions(self):
         while True:
             keyboard = self.hardware[-2]
-            if keyboard.irq_enabled is True:
-                if keyboard.int_counter > 0:
-                    keyboard.int_counter -= 1
-                    self.push(self.regs.PC)
-                    self.push(self.regs.A)
+            if keyboard.interruptions and self.on_interruption is False:
+                self.push(self.regs.PC)
+                self.push(self.regs.A)
 
-                    self.regs.A = keyboard.irq_code
-                    self.regs.PC = self.regs.IA
+                self.regs.A = keyboard.interruptions.pop()
+                self.regs.PC = self.regs.IA
+                self.on_interruption = True
 
             origin_pc = self.regs.PC
             code = self.ram[self.regs.PC]
@@ -237,6 +238,7 @@ class Emulator:
             self.regs.A = self.pop()
             self.regs.PC = self.pop()
             do_not_inc_pc = True
+            self.on_interruption = False
         elif cmd == 'IAQ':
             print(' ** todo **')
             pass

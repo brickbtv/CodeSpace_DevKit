@@ -1,10 +1,8 @@
 import sys
-import time
 
-from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import QPoint, QTimer, QRect, Qt, QCoreApplication, QRectF, \
-    QEvent
-from PyQt5.QtGui import QTextCursor, QColor, QImage, QPixmap, qRgb
+from PyQt5 import QtWidgets, QtGui
+from PyQt5.QtCore import QPoint, QTimer, Qt, QEvent
+from PyQt5.QtGui import QTextCursor, QImage, QPixmap, qRgb
 from PyQt5.QtWidgets import QGraphicsScene, QLabel
 
 from constants import LEM1802_FONT, LEM1802_PALETTE
@@ -18,6 +16,7 @@ from devkit_code_editor import QCodeEditor
 
 # filename = 'testbin/dance.bin'
 filename = 'mghelm1.8.bin'
+# filename = 'o1.bin'
 
 
 class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
@@ -66,11 +65,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def eventFilter(self, source, event):
         # keyboard support
-        if event.type() == QEvent.KeyRelease:
-            keyboard: Keyboard = self.emulator.hardware[-2]
-            keyboard.add_key(None)
-
-        if event.type() == QEvent.KeyPress: # and source is self.keyboard:
+        if event.type() in (QEvent.KeyPress, QEvent.KeyRelease):
             key = 0
             if event.key() == Qt.Key_Backspace:
                 key = 0x10
@@ -99,7 +94,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                     print('Bad key')
 
             keyboard: Keyboard = self.emulator.hardware[-2]
-            keyboard.add_key(key)
+            keyboard.add_key(key, event.type() == QEvent.KeyPress)
 
         return super().eventFilter(source, event)
 
@@ -196,8 +191,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             label: QLabel = thrusters[i]
             label.setText(str(thruster.power))
 
+        keyboard: Keyboard = self.emulator.hardware[-2]
+        self.keyboard_buffer.setText(f'{",".join([chr(c) for c in keyboard.buffer])}'[:50])
+
     def step_instruction(self):
-        for i in range(1000):
+        for i in range(100):
             pc = next(self.gen)
 
             cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(self.pc_to_line[pc]))
