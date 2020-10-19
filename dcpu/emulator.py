@@ -1,8 +1,9 @@
 import argparse
 from collections import defaultdict
 
-from constants import BIN2REGISTERS, LEM1802_PALETTE, LEM1802_FONT
+from constants import BIN2REGISTERS
 from decoder import Decoder
+from hardware import Display, Keyboard, Thruster
 from instuction import Operator, Instruction
 
 
@@ -58,121 +59,6 @@ class RAM:
         self._ram[key] = value
 
 
-class Hardware:
-    ID = None
-    VERSION = None
-    VENDOR = None
-
-    def __init__(self, regs: Registers, ram: RAM):
-        self.regs = regs
-        self.ram = ram
-
-    def interrupt(self):
-        raise NotImplemented
-
-
-class Display(Hardware):
-    """LEM1802"""
-    ID = 0x7349f615
-    VERSION = 0x1802
-    VENDOR = 0x1c6c8b36
-
-    def __init__(self, regs: Registers, ram: RAM):
-        super().__init__(regs, ram)
-        self.vram = 0
-        self.fram = 0
-        self.pram = 0
-        self.border_color = 0
-
-    def interrupt(self):
-        code = self.regs.A
-
-        if code == 0:
-            self.vram = self.regs.B
-        elif code == 1:
-            self.fram = self.regs.B
-        elif code == 2:
-            self.pram = self.regs.B
-        elif code == 3:
-            self.border_color = self.regs.B
-        elif code == 4:
-            for i, data in enumerate(LEM1802_FONT):
-                self.ram[self.regs.B + i] = data
-        elif code == 5:
-            for i, data in enumerate(LEM1802_PALETTE):
-                self.ram[self.regs.B + i] = data
-        else:
-            raise Exception
-
-    def dump(self):
-        print('-'*32)
-        for y in range(12):
-            for x in range(32):
-                data = self.ram[self.vram + x + y*32]
-                print(chr(data & 0xff), end='')
-            print()
-        print('-'*32)
-
-
-class Keyboard(Hardware):
-    """"""
-    ID = 0x30cf7406
-    VERSION = 0x1
-    VENDOR = 0x0
-
-    def __init__(self, regs: Registers, ram: RAM):
-        super().__init__(regs, ram)
-        self.buffer = []
-        self.irq_enabled = False
-        self.irq_code = None
-        self.i_need_int = False
-
-
-    def interrupt(self):
-        code = self.regs.A
-        if code == 0:
-            self.buffer = []
-        elif code == 1:
-            if self.buffer:
-                self.regs.C = self.buffer[0]
-                self.buffer = self.buffer[1:]
-            else:
-                self.regs.C = 0
-        elif code == 2:
-            if self.buffer and self.buffer[0] == self.regs.B:
-                self.regs.C = 1
-                self.buffer = self.buffer[1:]
-            else:
-                self.regs.C = 0
-        elif code == 3:
-            if self.regs.B == 0:
-                self.irq_enabled = False
-                self.irq_code = None
-            else:
-                self.irq_enabled = True
-                self.irq_code = self.regs.B
-
-    def add_key(self, key):
-        self.buffer.append(key)
-        if self.irq_enabled:
-            self.i_need_int = True
-
-
-class Thruster(Hardware):
-    ID = 0xa4748683
-    VERSION = 0x0001
-    VENDOR = 0x54482b2b
-
-    def __init__(self, regs: Registers, ram: RAM):
-        super().__init__(regs, ram)
-        self.power = 0
-
-    def interrupt(self):
-        code = self.regs.A
-        if code == 0:
-            self.power = self.regs.B & 0xf
-
-
 class Emulator:
     def __init__(self, debug):
         self._debug = debug
@@ -188,13 +74,14 @@ class Emulator:
     def gen_instructions(self):
         while True:
             keyboard = self.hardware[-2]
-            if keyboard.i_need_int is True:
-                keyboard.i_need_int = False
-                self.push(self.regs.PC)
-                self.push(self.regs.A)
+            if keyboard.irq_enabled is True:
+                if keyboard.int_counter > 0:
+                    keyboard.int_counter -= 1
+                    self.push(self.regs.PC)
+                    self.push(self.regs.A)
 
-                self.regs.A = keyboard.irq_code
-                self.regs.PC = self.regs.IA
+                    self.regs.A = keyboard.irq_code
+                    self.regs.PC = self.regs.IA
 
             origin_pc = self.regs.PC
             code = self.ram[self.regs.PC]

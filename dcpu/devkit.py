@@ -5,18 +5,19 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtCore import QPoint, QTimer, QRect, Qt, QCoreApplication, QRectF, \
     QEvent
 from PyQt5.QtGui import QTextCursor, QColor, QImage, QPixmap, qRgb
-from PyQt5.QtWidgets import QGraphicsScene
+from PyQt5.QtWidgets import QGraphicsScene, QLabel
 
 from constants import LEM1802_FONT, LEM1802_PALETTE
 from decoder import Decoder
-from emulator import Emulator, Keyboard
+from emulator import Emulator
+from hardware import Keyboard
 import devkit_ui
 
 from devkit_code_editor import QCodeEditor
 
 
-filename = 'testbin/tetris.bin'
-# filename = 'o1.bin'
+# filename = 'testbin/dance.bin'
+filename = 'mghelm1.8.bin'
 
 
 class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
@@ -43,8 +44,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.scene = QGraphicsScene()
         self.xx = 0
         self.display.setScene(self.scene)
-        self.display.fitInView(QRectF(self.display.rect()), Qt.KeepAspectRatio)
-        self.display.scale(self.width() / 128 / 2, self.height() / 96 / 2)
+
+        # self.display.fitInView(QRectF(self.display.rect()), Qt.KeepAspectRatio)
+        self.display.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
+
+        # self.display.scale(self.width() / 128 / 2, self.height() / 96 / 2)
 
         # self.keyboard.textChanged.connect(self.keyboard_input)
 
@@ -62,9 +66,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def eventFilter(self, source, event):
         # keyboard support
-        if event.type() == QEvent.KeyPress: # and source is self.keyboard:
-            # print('key press:', (event.key(), event.text()))
+        if event.type() == QEvent.KeyRelease:
+            keyboard: Keyboard = self.emulator.hardware[-2]
+            keyboard.add_key(None)
 
+        if event.type() == QEvent.KeyPress: # and source is self.keyboard:
             key = 0
             if event.key() == Qt.Key_Backspace:
                 key = 0x10
@@ -96,7 +102,6 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             keyboard.add_key(key)
 
         return super().eventFilter(source, event)
-
 
     def setup_code_editor(self):
         better_code = QCodeEditor(self.centralwidget, self.pc_to_line)
@@ -183,6 +188,13 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                         self.image.setPixel(x*4+xx, y*8+yy, palette[fgcolor] if v else palette[bgcolor])
 
         self.scene.addPixmap(QPixmap.fromImage(self.image))
+        self.display.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
+
+        thrusters = [self.thruster0, self.thruster1, self.thruster2, self.thruster3, self.thruster4, self.thruster5, self.thruster6, self.thruster7]
+
+        for i, thruster in enumerate(self.emulator.hardware[:8]):
+            label: QLabel = thrusters[i]
+            label.setText(str(thruster.power))
 
     def step_instruction(self):
         for i in range(1000):
