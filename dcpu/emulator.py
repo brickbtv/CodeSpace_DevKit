@@ -125,11 +125,13 @@ class Keyboard(Hardware):
         self.buffer = []
         self.irq_enabled = False
         self.irq_code = None
+        self.i_need_int = False
+
 
     def interrupt(self):
         code = self.regs.A
         if code == 0:
-            self.buffer = ''
+            self.buffer = []
         elif code == 1:
             if self.buffer:
                 self.regs.C = self.buffer[0]
@@ -149,6 +151,11 @@ class Keyboard(Hardware):
             else:
                 self.irq_enabled = True
                 self.irq_code = self.regs.B
+
+    def add_key(self, key):
+        self.buffer.append(key)
+        if self.irq_enabled:
+            self.i_need_int = True
 
 
 class Thruster(Hardware):
@@ -180,6 +187,15 @@ class Emulator:
 
     def gen_instructions(self):
         while True:
+            keyboard = self.hardware[-2]
+            if keyboard.i_need_int is True:
+                keyboard.i_need_int = False
+                self.push(self.regs.PC)
+                self.push(self.regs.A)
+
+                self.regs.A = keyboard.irq_code
+                self.regs.PC = self.regs.IA
+
             origin_pc = self.regs.PC
             code = self.ram[self.regs.PC]
             if code == 0:
@@ -331,7 +347,6 @@ class Emulator:
         elif cmd == 'IAS':
             self.regs.IA = value_a
         elif cmd == 'RFI':
-            print(' ** todo **')
             self.regs.A = self.pop()
             self.regs.PC = self.pop()
             do_not_inc_pc = True

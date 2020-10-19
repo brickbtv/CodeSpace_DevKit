@@ -22,7 +22,7 @@ class QLineNumberArea(QWidget):
 
 
 class QCodeEditor(QPlainTextEdit):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, pc_to_line=None):
         super().__init__(parent)
         self.lineNumberArea = QLineNumberArea(self)
         self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
@@ -30,12 +30,14 @@ class QCodeEditor(QPlainTextEdit):
         self.cursorPositionChanged.connect(self.highlightCurrentLine)
         self.updateLineNumberAreaWidth(0)
 
+        self.line_to_ps = {line: pc for pc, line in pc_to_line.items()}
+
     def lineNumberAreaWidth(self):
-        digits = 1
-        max_value = max(1, self.blockCount())
-        while max_value >= 10:
-            max_value /= 10
-            digits += 1
+        digits = 6
+        # max_value = max(1, self.blockCount())
+        # while max_value >= 10:
+        #     max_value /= 10
+        #     digits += 1
         space = 3 + self.fontMetrics().width('9') * digits
         return space
 
@@ -81,7 +83,7 @@ class QCodeEditor(QPlainTextEdit):
         height = self.fontMetrics().height()
         while block.isValid() and (top <= event.rect().bottom()):
             if block.isVisible() and (bottom >= event.rect().top()):
-                number = str(blockNumber + 1)
+                number = f'0x{self.line_to_ps[blockNumber]:04x}' #str(blockNumber + 1)
                 painter.setPen(Qt.black)
                 painter.drawText(0, top, self.lineNumberArea.width(), height, Qt.AlignRight, number)
 

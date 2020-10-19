@@ -16,6 +16,7 @@ from devkit_code_editor import QCodeEditor
 
 
 filename = 'testbin/tetris.bin'
+# filename = 'o1.bin'
 
 
 class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
@@ -23,12 +24,13 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         super().__init__()
         self.setupUi(self)
         self.keyboard.installEventFilter(self)
-        self.better_code = self.setup_code_editor()
 
         self.decoder = Decoder()
         self.load_bin()
 
-        self.emulator = Emulator(debug=True)
+        self.better_code = self.setup_code_editor()
+
+        self.emulator = Emulator(debug=False)
         self.decoder = Decoder()
 
         self.registers_view = self.registers
@@ -53,7 +55,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.threads = [emu_timer]
 
         timer = QTimer(self)
-        timer.setInterval(10)
+        timer.setInterval(100)
         timer.timeout.connect(self.draw_display)
         timer.start()
         self.threads.append(timer)
@@ -91,13 +93,13 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                     print('Bad key')
 
             keyboard: Keyboard = self.emulator.hardware[-2]
-            keyboard.buffer.append(key)
+            keyboard.add_key(key)
 
         return super().eventFilter(source, event)
 
 
     def setup_code_editor(self):
-        better_code = QCodeEditor(self.centralwidget)
+        better_code = QCodeEditor(self.centralwidget, self.pc_to_line)
 
         font = QtGui.QFont()
         font.setFamily(self.code.font().family())
@@ -111,18 +113,22 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.code.deleteLater()
         self.code = None
 
+        for line in self.lines:
+            better_code.appendPlainText(line)
+
+        cursor = better_code.cursorForPosition(QPoint(0, 0))
+        better_code.setTextCursor(cursor)
+
         return better_code
 
     def load_bin(self):
         self.pc_to_line = {}
+        self.lines = []
 
         for line_num, (pc, instruction) in enumerate(self.decoder.gen_instructions(filename)):
             line = self.decoder.print_instruction(instruction, pc, extended=False)
-            self.better_code.appendPlainText(line)
+            self.lines.append(line)
             self.pc_to_line[pc] = line_num
-
-        cursor = self.better_code.cursorForPosition(QPoint(0, 0))
-        self.better_code.setTextCursor(cursor)
 
     def load_palette(self):
         data = LEM1802_PALETTE
@@ -178,10 +184,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         self.scene.addPixmap(QPixmap.fromImage(self.image))
 
-        self.xx += 1
-
     def step_instruction(self):
-        for i in range(1):
+        for i in range(1000):
             pc = next(self.gen)
 
             cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(self.pc_to_line[pc]))
