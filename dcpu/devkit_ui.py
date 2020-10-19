@@ -30,6 +30,13 @@ class Ui_MainWindow(object):
         self.display = QtWidgets.QGraphicsView(self.centralwidget)
         self.display.setObjectName("display")
         self.verticalLayout.addWidget(self.display)
+        self.keyboard = QtWidgets.QLineEdit(self.centralwidget)
+        font = QtGui.QFont()
+        font.setFamily("Monospace")
+        font.setPointSize(8)
+        self.keyboard.setFont(font)
+        self.keyboard.setObjectName("keyboard")
+        self.verticalLayout.addWidget(self.keyboard)
         self.registers = QtWidgets.QTableWidget(self.centralwidget)
         font = QtGui.QFont()
         font.setPointSize(9)
@@ -124,6 +131,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        self.keyboard.setPlaceholderText(_translate("MainWindow", "Keyboard input..."))
         item = self.registers.verticalHeaderItem(0)
         item.setText(_translate("MainWindow", "A"))
         item = self.registers.verticalHeaderItem(1)

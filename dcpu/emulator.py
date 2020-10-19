@@ -1,7 +1,7 @@
 import argparse
 from collections import defaultdict
 
-from constants import BIN2REGISTERS
+from constants import BIN2REGISTERS, LEM1802_PALETTE, LEM1802_FONT
 from decoder import Decoder
 from instuction import Operator, Instruction
 
@@ -96,9 +96,11 @@ class Display(Hardware):
         elif code == 3:
             self.border_color = self.regs.B
         elif code == 4:
-            raise NotImplemented
+            for i, data in enumerate(LEM1802_FONT):
+                self.ram[self.regs.B + i] = data
         elif code == 5:
-            raise NotImplemented
+            for i, data in enumerate(LEM1802_PALETTE):
+                self.ram[self.regs.B + i] = data
         else:
             raise Exception
 
@@ -111,6 +113,7 @@ class Display(Hardware):
             print()
         print('-'*32)
 
+
 class Keyboard(Hardware):
     """"""
     ID = 0x30cf7406
@@ -119,7 +122,7 @@ class Keyboard(Hardware):
 
     def __init__(self, regs: Registers, ram: RAM):
         super().__init__(regs, ram)
-        self.buffer = ''
+        self.buffer = []
         self.irq_enabled = False
         self.irq_code = None
 
@@ -171,8 +174,8 @@ class Emulator:
         self.ram = RAM(False)
         self.regs = Registers()
         self.regs.SP = 0xffff+1
-        self.hardware = [Thruster(self.regs, self.ram) for i in range(8)]
-
+        self.hardware = []
+        self.hardware.extend([Thruster(self.regs, self.ram) for _ in range(8)])
         self.hardware.extend([Keyboard(self.regs, self.ram), Display(self.regs, self.ram)])
 
     def gen_instructions(self):
@@ -431,10 +434,10 @@ class Emulator:
     def push(self, value):
         self.regs.SP -= 1
         self.ram[self.regs.SP] = value
-        self._dump_stack()
+        #self._dump_stack()
 
     def pop(self):
-        self._dump_stack()
+        #self._dump_stack()
         value = self.ram[self.regs.SP]
         self.regs.SP += 1
         return value

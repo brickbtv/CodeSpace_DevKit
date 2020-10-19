@@ -31,6 +31,19 @@
        <widget class="QGraphicsView" name="display"/>
       </item>
       <item>
+       <widget class="QLineEdit" name="keyboard">
+        <property name="font">
+         <font>
+          <family>Monospace</family>
+          <pointsize>8</pointsize>
+         </font>
+        </property>
+        <property name="placeholderText">
+         <string>Keyboard input...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QTableWidget" name="registers">
         <property name="font">
          <font>

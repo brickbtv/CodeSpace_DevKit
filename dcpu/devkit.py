@@ -2,74 +2,33 @@ import sys
 import time
 
 from PyQt5 import QtCore, QtWidgets, QtGui
-from PyQt5.QtCore import QPoint, QTimer, QRect, Qt, QCoreApplication
+from PyQt5.QtCore import QPoint, QTimer, QRect, Qt, QCoreApplication, QRectF, \
+    QEvent
 from PyQt5.QtGui import QTextCursor, QColor, QImage, QPixmap, qRgb
 from PyQt5.QtWidgets import QGraphicsScene
 
 from constants import LEM1802_FONT, LEM1802_PALETTE
 from decoder import Decoder
-from emulator import Emulator
+from emulator import Emulator, Keyboard
 import devkit_ui
 
 from devkit_code_editor import QCodeEditor
 
 
-filename = 'testbin/matrix.bin'
-
-
-# class EmulatorThread(QtCore.QThread):
-#     def __init__(
-#             self,
-#             registers_view: QtWidgets.QTableWidget,
-#             code_editor: QtWidgets.QPlainTextEdit,
-#             emulator: Emulator,
-#             pc_to_line: dict,
-#     ):
-#         super().__init__()
-#         self.decoder = Decoder()
-#         self.emulator = emulator
-#         self.pc_to_line = pc_to_line
-#
-#         self.registers_view = registers_view
-#         self.code_editor = code_editor
-#
-#     def run(self):
-#         try:
-#             self._run()
-#         except Exception as ex:
-#             print(ex)
-#
-#     def _run(self):
-#         for pc in self.emulator.step_run(filename):
-#             if not self.isRunning():
-#                 return
-#
-#             cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(self.pc_to_line[pc]))
-#             self.code_editor.setTextCursor(cursor)
-#
-#             for i, reg in enumerate(['A', 'B', 'C', 'X', 'Y', 'Z', 'I', 'J', 'SP', 'PC', 'EX', 'IA']):
-#                 item = self.registers_view.item(i, 0)
-#                 item.setText(f'0x{self.emulator.regs[reg]:04x}')
-#
-#             time.sleep(0.0001)
+filename = 'testbin/tetris.bin'
 
 
 class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
+        self.keyboard.installEventFilter(self)
         self.better_code = self.setup_code_editor()
 
         self.decoder = Decoder()
         self.load_bin()
 
-        self.emulator = Emulator(True)
-
-        # emu_thread = EmulatorThread(
-        #     self.registers, self.better_code, self.emulator, self.pc_to_line,
-        # )
-        # emu_thread.start()
-
+        self.emulator = Emulator(debug=True)
         self.decoder = Decoder()
 
         self.registers_view = self.registers
@@ -77,22 +36,65 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         self.gen = self.emulator.step_run(filename)
 
+        self.display_size = (128, 96)
+        self.image = QImage(self.display_size[0], self.display_size[1], QImage.Format_RGB32)
+        self.scene = QGraphicsScene()
+        self.xx = 0
+        self.display.setScene(self.scene)
+        self.display.fitInView(QRectF(self.display.rect()), Qt.KeepAspectRatio)
+        self.display.scale(self.width() / 128 / 2, self.height() / 96 / 2)
+
+        # self.keyboard.textChanged.connect(self.keyboard_input)
+
         emu_timer = QTimer(self)
         emu_timer.setInterval(1)
         emu_timer.timeout.connect(self.step_instruction)
         emu_timer.start()
         self.threads = [emu_timer]
 
-        self.display_size = (128, 96)
-        self.image = QImage(self.display_size[0], self.display_size[1], QImage.Format_RGB32)
-        self.scene = QGraphicsScene()
-        self.xx = 0
-        self.display.setScene(self.scene)
         timer = QTimer(self)
         timer.setInterval(10)
         timer.timeout.connect(self.draw_display)
         timer.start()
         self.threads.append(timer)
+
+    def eventFilter(self, source, event):
+        # keyboard support
+        if event.type() == QEvent.KeyPress: # and source is self.keyboard:
+            # print('key press:', (event.key(), event.text()))
+
+            key = 0
+            if event.key() == Qt.Key_Backspace:
+                key = 0x10
+            elif event.key() == Qt.Key_Enter:
+                key = 0x11
+            elif event.key() == Qt.Key_Insert:
+                key = 0x12
+            elif event.key() == Qt.Key_Delete:
+                key = 0x13
+            elif event.key() == Qt.Key_Up:
+                key = 0x80
+            elif event.key() == Qt.Key_Down:
+                key = 0x81
+            elif event.key() == Qt.Key_Left:
+                key = 0x82
+            elif event.key() == Qt.Key_Right:
+                key = 0x83
+            elif event.key() == Qt.Key_Shift:
+                key = 0x90
+            elif event.key() == Qt.Key_Control:
+                key = 0x91
+            else:
+                try:
+                    key = ord(event.text())
+                except:
+                    print('Bad key')
+
+            keyboard: Keyboard = self.emulator.hardware[-2]
+            keyboard.buffer.append(key)
+
+        return super().eventFilter(source, event)
+
 
     def setup_code_editor(self):
         better_code = QCodeEditor(self.centralwidget)
@@ -125,7 +127,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     def load_palette(self):
         data = LEM1802_PALETTE
         if self.emulator.hardware[-1].pram > 0:
-            data = self.emulator.hardware[-1].pram
+            data = [self.emulator.ram[self.emulator.hardware[-1].pram + i] for i in range(16)]
 
         palette = []
         for i in range(16):
@@ -151,8 +153,14 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 fgcolor = (val & 0xf000) >> 12
 
                 char *= 2
-                hi = LEM1802_FONT[char]
-                lo = LEM1802_FONT[char+1]
+
+                fram = self.emulator.hardware[-1].fram
+                if fram == 0:
+                    hi = LEM1802_FONT[char]
+                    lo = LEM1802_FONT[char + 1]
+                else:
+                    hi = self.emulator.ram[fram + char]
+                    lo = self.emulator.ram[fram + char + 1]
 
                 for xx in range(4):
                     for yy in range(8):
@@ -173,7 +181,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.xx += 1
 
     def step_instruction(self):
-        for i in range(2):
+        for i in range(1):
             pc = next(self.gen)
 
             cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(self.pc_to_line[pc]))
@@ -182,7 +190,6 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             for i, reg in enumerate(['A', 'B', 'C', 'X', 'Y', 'Z', 'I', 'J', 'SP', 'PC', 'EX', 'IA']):
                 item = self.registers_view.item(i, 0)
                 item.setText(f'0x{self.emulator.regs[reg]:04x}')
-
 
 
 if __name__ == '__main__':
