@@ -275,7 +275,7 @@ class Emulator:
         elif cmd == 'IFB':
             if value_b & value_a == 0:
                 self.skip_next_instruction()
-        elif cmd == 'IFB':
+        elif cmd == 'IFC':
             if value_b & value_a != 0:
                 self.skip_next_instruction()
         elif cmd == 'IFE':
@@ -371,6 +371,8 @@ class Emulator:
             self.skip_next_instruction()
 
     def set(self, operator: Operator, value=None):
+        value = value & 0xffff
+
         op = operator.op
         nw = operator.nw
         if 0x00 <= op <= 0x07:
