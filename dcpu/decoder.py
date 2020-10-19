@@ -44,7 +44,7 @@ class Decoder:
 
         nw1 = nw2 = False
 
-        if instruction_type is InstructionType.BASIC and (operand_b == 0x1e or 0x10 <= operand_b <= 0x17):
+        if instruction_type is InstructionType.BASIC and (operand_b in (0x1a, 0x1e, 0x1f) or 0x10 <= operand_b <= 0x17):
             nw2 = True
 
         if operand_a in {0x1a, 0x1f, 0x1e} or 0x10 <= operand_a <= 0x17:
@@ -97,7 +97,7 @@ class Decoder:
                     pc += 1
                     nw1 = int.from_bytes(f.read(2), "little")
 
-                if instruction_type is InstructionType.BASIC and (operand_b == 0x1e or 0x10 <= operand_b <= 0x17):
+                if instruction_type is InstructionType.BASIC and (operand_b in (0x1a, 0x1e, 0x1f) or 0x10 <= operand_b <= 0x17):
                     pc += 1
                     nw2 = int.from_bytes(f.read(2), "little")
 
@@ -140,8 +140,13 @@ class Decoder:
                 value = f'[0x{nw:04x}]'
             elif op == 0x1f:
                 value = f'0x{nw:04x}'
+            elif op == 0x20:
+                value = '0xffff'
+            elif 0x21 <= op <= 0x3f:
+                value = f'{op - 0x21}'
             else:
-                raise Exception
+                # raise Exception
+                return Decoder.print_dat(instruction.code, pc, extended)
 
             ops += value + ' '
 

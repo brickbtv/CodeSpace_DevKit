@@ -14,7 +14,7 @@ import devkit_ui
 from devkit_code_editor import QCodeEditor
 
 
-filename = 'testbin/admiral.bin'
+filename = 'testbin/matrix.bin'
 
 
 # class EmulatorThread(QtCore.QThread):

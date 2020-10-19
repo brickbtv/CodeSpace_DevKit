@@ -215,7 +215,8 @@ class Emulator:
                 value_b = self.get_value_from_op(instruction.B, do_pop=False)
                 value_a = self.get_value_from_op(instruction.A, do_pop=True)
             except:
-                raise
+                self.decoder.print_dat(instruction.code, pc, True)
+                # raise
 
             do_not_inc_pc = self.exec_instruction(instruction, value_b, value_a)
 
@@ -418,6 +419,10 @@ class Emulator:
             return self.ram[nw]
         elif op == 0x1f:
             return nw
+        elif op == 0x20:
+            return 0xffff
+        elif 0x21 <= op <= 0x3f:
+            return op - 0x21
         else:
             raise Exception
 
