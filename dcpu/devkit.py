@@ -8,14 +8,14 @@ from PyQt5.QtWidgets import QGraphicsScene, QLabel
 from constants import LEM1802_FONT, LEM1802_PALETTE
 from decoder import Decoder
 from emulator import Emulator
-from hardware import Keyboard
+from hardware import Keyboard, Sensor
 import devkit_ui
 
 from devkit_code_editor import QCodeEditor
 
 
-# filename = 'testbin/dance.bin'
-filename = 'mghelm1.8.bin'
+filename = 'testbin/dance.bin'
+# filename = 'mghelm1.8.bin'
 # filename = 'o1.bin'
 
 
@@ -185,17 +185,40 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.scene.addPixmap(QPixmap.fromImage(self.image))
         self.display.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
 
+        # set thrusters UI
         thrusters = [self.thruster0, self.thruster1, self.thruster2, self.thruster3, self.thruster4, self.thruster5, self.thruster6, self.thruster7]
 
         for i, thruster in enumerate(self.emulator.hardware[:8]):
             label: QLabel = thrusters[i]
             label.setText(str(thruster.power))
 
+        # set keyboard buffer UI
         keyboard: Keyboard = self.emulator.hardware[-2]
         self.keyboard_buffer.setText(f'{",".join([chr(c) for c in keyboard.buffer])}'[:50])
 
+        # update sensors from UI
+        data = []
+        for i in range(7):
+            type = self.contacts.item(i, 0)
+            size = self.contacts.item(i, 1)
+            range_ = self.contacts.item(i, 2)
+            angle = self.contacts.item(i, 3)
+
+            try:
+                data.append({
+                    'type': int(type.text(), 16),
+                    'size': int(size.text(), 16),
+                    'range': int(range_.text(), 16),
+                    'angle': int(angle.text(), 16),
+                })
+            except Exception:
+                continue
+
+        sensor: Sensor = self.emulator.hardware[-3]
+        sensor.update_sensor(data)
+
     def step_instruction(self):
-        for i in range(100):
+        for i in range(1000):
             pc = next(self.gen)
 
             cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(self.pc_to_line[pc]))

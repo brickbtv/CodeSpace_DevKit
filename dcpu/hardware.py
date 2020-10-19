@@ -131,21 +131,12 @@ class Sensor(Hardware):
     def __init__(self, regs: 'Registers', ram: 'RAM'):
         super().__init__(regs, ram)
         self.contacts = []
+        self.data = []
 
     def interrupt(self):
         code = self.regs.A
         if code == 1:
-            self.contacts = [{
-                'type': 0x0003,
-                'size': 0x000c,
-                'angle': 0x1FFF,
-                'range': 0x0100,
-            }, {
-                'type': 0x0201,
-                'size': 0x000c,
-                'angle': 0x1FFF,
-                'range': 0x0100,
-            }]
+            self.contacts = self.data
         elif code == 0:
             try:
                 contact = self.contacts.pop()
@@ -158,3 +149,6 @@ class Sensor(Hardware):
                 self.regs.X = 0
                 self.regs.Y = 0
                 self.regs.Z = 0
+
+    def update_sensor(self, data):
+        self.data = data
