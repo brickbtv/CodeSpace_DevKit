@@ -214,13 +214,24 @@ class Emulator:
     def xor(self, inst, b, a):
         self.set(inst.B, value=b ^ a)
 
+    def _arith_shift(self, b, a):
+        return b >> a if b >= 0 else (b >> a) + 0x1000
+
     @instruction
     def shr(self, inst, b, a):
+        val = self._arith_shift(b, a)
+        self.set(inst.B, value=val)
+        self.regs.EX = ((b << 16) >> a) & 0xffff
+
+    @instruction
+    def asr(self, inst, b, a):
         self.set(inst.B, value=b >> a)
+        self.regs.EX = self._arith_shift((b << 16), a) & 0xffff
 
     @instruction
     def shl(self, inst, b, a):
         self.set(inst.B, value=b << a)
+        self.regs.EX = ((b << a) >> 16) & 0xffff
 
     @instruction
     def ifb(self, _, b, a):

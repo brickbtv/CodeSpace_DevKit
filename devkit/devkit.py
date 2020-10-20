@@ -1,3 +1,4 @@
+import argparse
 import sys
 
 from PyQt5 import QtWidgets, QtGui
@@ -14,25 +15,22 @@ import devkit_ui
 from devkit_code_editor import QCodeEditor
 
 
-filename = 'testbin/mghelm1.8.bin'
-# filename = 'mghelm1.8.bin'
-# filename = 'o1.bin'
-
-
 class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
-    def __init__(self):
+    def __init__(self, filename):
         super().__init__()
         self.setupUi(self)
         self.keyboard.installEventFilter(self)
 
-        self.load_bin()
-
-        self.code_editor = self.setup_code_editor()
-
         self.emulator = Emulator(debug=False)
 
-        self.emulator.preload(filename)
-        self.gen = self.emulator.run_step()
+        if filename:
+            self.load_bin(filename)
+            self.code_editor = self.setup_code_editor()
+
+            self.emulator.preload(filename)
+            self.gen = self.emulator.run_step()
+        else:
+            self.gen = None
 
         self.display_size = (128, 96)
         self.image = QImage(self.display_size[0], self.display_size[1], QImage.Format_RGB32)
@@ -112,7 +110,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         return better_code
 
-    def load_bin(self):
+    def load_bin(self, filename):
         self.pc_to_line = {}
         self.lines = []
 
@@ -209,6 +207,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         sensor.update_sensor(data)
 
     def step_instruction(self):
+        if self.gen is None:
+            return
+
         for i in range(1000):
             pc = next(self.gen)
 
@@ -221,7 +222,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--filename')
+    args = parser.parse_args()
+
     app = QtWidgets.QApplication(sys.argv)
-    window = DevKitApp()
+    window = DevKitApp(args.filename)
     window.show()
     app.exec_()
