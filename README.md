@@ -23,16 +23,22 @@ Includes:
 * Some performance issues for a long running emulations
 
 ### Requirements
+python 3.6+  
+Qt packages (depends on platform)  
 
-python 3.6+
-Qt packages (depends on platform)
-
-requirements installation: ```python3 -m pip install -r requirements.txt```
+requirements installation: 
+```sh
+python3 -m pip install -r requirements.txt
+```
 
 ### Run
 
 Clear run: 
-```python devkit/devkit.py```
+```sh
+python devkit/devkit.py
+```
 
 Run with specified .bin file
-```python devkit/devkit.py --filename somefile.bin```
+```sh
+python devkit/devkit.py --filename somefile.bin
+```
