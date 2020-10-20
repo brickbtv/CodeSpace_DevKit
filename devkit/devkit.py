@@ -27,12 +27,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         self.load_bin()
 
-        self.better_code = self.setup_code_editor()
+        self.code_editor = self.setup_code_editor()
 
         self.emulator = Emulator(debug=False)
-
-        self.registers_view = self.registers
-        self.code_editor = self.better_code
 
         self.emulator.preload(filename)
         self.gen = self.emulator.run_step()
@@ -43,12 +40,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.xx = 0
         self.display.setScene(self.scene)
 
-        # self.display.fitInView(QRectF(self.display.rect()), Qt.KeepAspectRatio)
         self.display.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
-
-        # self.display.scale(self.width() / 128 / 2, self.height() / 96 / 2)
-
-        # self.keyboard.textChanged.connect(self.keyboard_input)
 
         emu_timer = QTimer(self)
         emu_timer.setInterval(1)
@@ -224,7 +216,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.code_editor.setTextCursor(cursor)
 
             for i, reg in enumerate(['A', 'B', 'C', 'X', 'Y', 'Z', 'I', 'J', 'SP', 'PC', 'EX', 'IA']):
-                item = self.registers_view.item(i, 0)
+                item = self.registers.item(i, 0)
                 item.setText(f'0x{self.emulator.regs[reg]:04x}')
 
 

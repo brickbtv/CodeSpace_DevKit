@@ -134,7 +134,7 @@ class Emulator:
             self.stack_push(self.regs.PC)
             self.stack_push(self.regs.A)
 
-            self.regs.A = keyboard.interruptions.stack_pop()
+            self.regs.A = keyboard.interruptions.pop()
             self.regs.PC = self.regs.IA
             self.on_interruption_now = True
 
