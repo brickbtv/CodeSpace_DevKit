@@ -35,10 +35,10 @@ python3 -m pip install -r requirements.txt
 
 Clear run: 
 ```sh
-python devkit/devkit.py
+python3 devkit/devkit.py
 ```
 
 Run with specified .bin file
 ```sh
-python devkit/devkit.py --filename somefile.bin
+python3 devkit/devkit.py --filename somefile.bin
 ```
