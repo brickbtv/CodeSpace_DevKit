@@ -16,6 +16,7 @@ class Thruster(Hardware):
     ID = 0xa4748683
     VERSION = 0x0001
     VENDOR = 0x54482b2b
+    TYPE = 'thruster'
 
     def __init__(self, regs: Registers, ram: RAM):
         super().__init__(regs, ram)

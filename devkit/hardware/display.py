@@ -7,6 +7,7 @@ class Display(Hardware):
     ID = 0x7349f615
     VERSION = 0x1802
     VENDOR = 0x1c6c8b36
+    TYPE = 'display'
 
     def __init__(self, regs: 'Registers', ram: 'RAM'):
         super().__init__(regs, ram)

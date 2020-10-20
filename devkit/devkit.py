@@ -34,7 +34,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.registers_view = self.registers
         self.code_editor = self.better_code
 
-        self.gen = self.emulator.step_run(filename)
+        self.emulator.preload(filename)
+        self.gen = self.emulator.run_step()
 
         self.display_size = (128, 96)
         self.image = QImage(self.display_size[0], self.display_size[1], QImage.Format_RGB32)

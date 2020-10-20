@@ -5,6 +5,7 @@ class Hardware(ABC):
     ID = None
     VERSION = None
     VENDOR = None
+    TYPE = None
 
     def __init__(self, regs: 'Registers', ram: 'RAM'):
         self.regs = regs

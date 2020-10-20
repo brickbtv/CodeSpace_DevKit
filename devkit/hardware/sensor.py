@@ -29,6 +29,7 @@ class Sensor(Hardware):
     ID = 0x1F12E306
     VERSION = 0x0001
     VENDOR = 0x54482B2B
+    TYPE = 'sensor'
 
     def __init__(self, regs: Registers, ram: RAM):
         super().__init__(regs, ram)

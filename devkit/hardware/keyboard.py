@@ -6,6 +6,7 @@ class Keyboard(Hardware):
     ID = 0x30cf7406
     VERSION = 0x1
     VENDOR = 0x0
+    TYPE = 'keyboard'
 
     def __init__(self, regs: 'Registers', ram: 'RAM'):
         super().__init__(regs, ram)
