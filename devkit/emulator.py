@@ -1,7 +1,7 @@
 import argparse
 
 from constants import BIN2REGISTERS
-from decoder import Decoder
+from decoder import load_bin_file, to_human_readable, to_human_readable_dat, describe_instruction
 from hardware import Display, Keyboard, RAM, Registers, Sensor, Thruster
 from instuction import Operator, Instruction
 
@@ -10,7 +10,6 @@ class Emulator:
     def __init__(self, debug):
         self._debug = debug
 
-        self.decoder = Decoder()
         self.ram = RAM()
         self.regs = Registers()
         self.regs.SP = 0xffff + 1
@@ -36,7 +35,7 @@ class Emulator:
             if code == 0:
                 break
 
-            cmd, op_b, op_a, nw_b, nw_a = self.decoder.describe_instruction(code)
+            cmd, op_b, op_a, nw_b, nw_a = describe_instruction(code)
 
             if nw_a is True:
                 self.regs.PC += 1
@@ -57,20 +56,19 @@ class Emulator:
 
     def step_run(self, filename):
         print('Loading program to RAM...')
-        for pc, code in self.decoder.gen_loader(filename):
+        for pc, code in load_bin_file(filename):
             self.ram[pc] = code
         print('Loading done.')
 
         for pc, instruction in self.gen_instructions():
             if self._debug:
-                print(self.decoder.print_instruction(instruction, pc))
+                print(to_human_readable(instruction, pc))
 
             try:
                 value_b = self.get_value_from_op(instruction.B, do_pop=False)
                 value_a = self.get_value_from_op(instruction.A, do_pop=True)
             except:
-                self.decoder.print_dat(instruction.code, pc, True)
-                # raise
+                to_human_readable_dat(instruction.code, pc, True)
 
             do_not_inc_pc = self.exec_instruction(instruction, value_b, value_a)
 
@@ -212,7 +210,7 @@ class Emulator:
 
     def skip_next_instruction(self):
         code = self.ram[self.regs.PC + 1]
-        cmd, op_b, op_a, nw_b, nw_a = self.decoder.describe_instruction(code)
+        cmd, op_b, op_a, nw_b, nw_a = describe_instruction(code)
         skip = 1
         if nw_a:
             skip += 1

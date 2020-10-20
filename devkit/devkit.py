@@ -6,7 +6,7 @@ from PyQt5.QtGui import QTextCursor, QImage, QPixmap, qRgb
 from PyQt5.QtWidgets import QGraphicsScene, QLabel
 
 from constants import LEM1802_FONT, LEM1802_PALETTE
-from decoder import Decoder
+from decoder import gen_instructions, to_human_readable
 from emulator import Emulator
 from hardware import Keyboard, Sensor
 import devkit_ui
@@ -25,13 +25,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.setupUi(self)
         self.keyboard.installEventFilter(self)
 
-        self.decoder = Decoder()
         self.load_bin()
 
         self.better_code = self.setup_code_editor()
 
         self.emulator = Emulator(debug=False)
-        self.decoder = Decoder()
 
         self.registers_view = self.registers
         self.code_editor = self.better_code
@@ -125,8 +123,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.pc_to_line = {}
         self.lines = []
 
-        for line_num, (pc, instruction) in enumerate(self.decoder.gen_instructions(filename)):
-            line = self.decoder.print_instruction(instruction, pc, extended=False)
+        for line_num, (pc, instruction) in enumerate(gen_instructions(filename)):
+            line = to_human_readable(instruction, pc, extended=False)
             self.lines.append(line)
             self.pc_to_line[pc] = line_num
 
