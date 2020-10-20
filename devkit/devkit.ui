@@ -37,6 +37,43 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
+       <widget class="QComboBox" name="speed">
+        <property name="currentIndex">
+         <number>3</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>1 kHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>10 kHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>100 kHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>10 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>100 MHz</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+      <item>
        <widget class="QGraphicsView" name="display"/>
       </item>
       <item>

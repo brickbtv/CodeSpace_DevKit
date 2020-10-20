@@ -4,7 +4,7 @@ from enum import Enum
 from pathlib import Path
 
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import QPoint, QTimer, Qt, QEvent
+from PyQt5.QtCore import QPoint, QTimer, Qt, QEvent, QCoreApplication
 from PyQt5.QtGui import QTextCursor, QImage, QPixmap, qRgb
 from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox
 
@@ -66,6 +66,13 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.actionRun.triggered.connect(self.action_run)
         self.actionReset.triggered.connect(self.action_reset)
 
+        self.speed_multiplier = 1
+        self.speed_changed()
+        self.speed.currentIndexChanged.connect(self.speed_changed)
+
+    def speed_changed(self):
+        self.speed_multiplier = 10 ** self.speed.currentIndex()
+
     def action_open_file(self):
         home_dir = str(Path.home())
         filename = QFileDialog.getOpenFileName(self, 'Open file', home_dir, 'BIN files (*.bin)')
@@ -81,6 +88,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.emulator_state = EmulationState.RUN_FAST
 
     def action_reset(self):
+        self.last_frame = []
         if self.filename is None:
             return
 
@@ -180,6 +188,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             ))
         return palette
 
+    last_frame = []
+
     def draw_display(self):
         if self.emulator is None:
             return
@@ -189,9 +199,18 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         vram = self.emulator.hardware[-1].video_ram
         fram = self.emulator.hardware[-1].font_ram
 
+        if not self.last_frame:
+            self.last_frame = self.emulator.ram[vram:32 * 12]
+
         for y in range(12):
             for x in range(32):
                 val = self.emulator.ram[vram + x + y * 32]
+
+                try:
+                    if val == self.last_frame([x + y * 32]):
+                        continue
+                except:
+                    pass
 
                 char = val & 0x007f
                 blink = val & 0x0080
@@ -265,21 +284,28 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         if self.gen is None:
             return
 
-        for i in range(100):
+        print(self.speed_multiplier)
+
+        for i in range(self.speed_multiplier):
+            # give some air to display thread
+            if i % 100 == 0:
+                QCoreApplication.processEvents()
+
             try:
                 pc = next(self.gen)
             except Exception as ex:
                 print(f'Exception: {ex}')
                 QMessageBox.warning(self, 'Error', f'Emulator halted. Reason: {ex}')
                 self.action_reset()
-
-            cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(self.pc_to_line[pc]))
-            self.code_editor.setTextCursor(cursor)
+                break
 
             if self.emulator_state is EmulationState.STEP_REQUESTED:
                 self.emulator_state = EmulationState.STEP_PREFORMED
                 self._dump_registers()
                 break
+
+        cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(self.pc_to_line[pc]))
+        self.code_editor.setTextCursor(cursor)
 
         self._dump_registers()
 
