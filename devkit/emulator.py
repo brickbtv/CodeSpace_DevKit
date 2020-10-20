@@ -1,62 +1,9 @@
 import argparse
-from collections import defaultdict
 
 from constants import BIN2REGISTERS
 from decoder import Decoder
-from hardware import Display, Keyboard, Thruster, Sensor
+from hardware import Display, Keyboard, RAM, Registers, Sensor, Thruster
 from instuction import Operator, Instruction
-
-
-class Registers:
-    REGS = ['A', 'B', 'C', 'X', 'Y', 'Z', 'I', 'J', 'SP', 'PC', 'EX', 'IA']
-
-    def __init__(self):
-        self._regs = defaultdict(lambda: 0)
-
-    def __getitem__(self, item):
-        return self.__getattr__(item)
-
-    def __setitem__(self, key, value):
-        return self.__setattr__(key, value)
-
-    def __getattr__(self, item):
-        if item not in self.REGS:
-            raise Exception
-        return self._regs[item]
-
-    def __setattr__(self, key, value):
-        if key == '_regs':
-            super.__setattr__(self, key, value)
-            return
-
-        if key not in self.REGS:
-            raise Exception
-        self._regs[key] = value
-
-    def __repr__(self):
-        regs_data = ', '.join([f'{reg}=0x{self.__getattr__(reg):04x}' for reg in self.REGS])
-        return f'<Registers: {regs_data}>'
-
-
-class RAM:
-    def __init__(self, debug=False):
-        self._ram = {}
-        self._debug = debug
-
-    def __getitem__(self, item):
-        if item not in self._ram:
-            self._ram[item] = 0
-
-        if self._debug:
-            print('<- [0x{:04x}] - 0x{:04x}'.format(item, self._ram[item]))
-
-        return self._ram[item]
-
-    def __setitem__(self, key, value):
-        if self._debug:
-            print('-> [0x{:04x}] = 0x{:04x}'.format(key, value))
-
-        self._ram[key] = value
 
 
 class Emulator:
@@ -64,9 +11,9 @@ class Emulator:
         self._debug = debug
 
         self.decoder = Decoder()
-        self.ram = RAM(False)
+        self.ram = RAM()
         self.regs = Registers()
-        self.regs.SP = 0xffff+1
+        self.regs.SP = 0xffff + 1
         self.hardware = []
         self.hardware.extend([Thruster(self.regs, self.ram) for _ in range(8)])
         self.hardware.extend([Sensor(self.regs, self.ram)])
@@ -258,7 +205,7 @@ class Emulator:
         elif cmd == 'HWI':
             hwnum = value_a
             device = self.hardware[hwnum]
-            device.interrupt()
+            device.handle_interruption()
         else:
             raise Exception
         return do_not_inc_pc

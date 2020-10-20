@@ -14,7 +14,7 @@ import devkit_ui
 from devkit_code_editor import QCodeEditor
 
 
-filename = 'testbin/dance.bin'
+filename = 'testbin/mghelm1.8.bin'
 # filename = 'mghelm1.8.bin'
 # filename = 'o1.bin'
 
@@ -94,7 +94,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                     print('Bad key')
 
             keyboard: Keyboard = self.emulator.hardware[-2]
-            keyboard.add_key(key, event.type() == QEvent.KeyPress)
+            keyboard.handle_key_event(key, event.type() == QEvent.KeyPress)
 
         return super().eventFilter(source, event)
 
@@ -132,8 +132,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def load_palette(self):
         data = LEM1802_PALETTE
-        if self.emulator.hardware[-1].pram > 0:
-            data = [self.emulator.ram[self.emulator.hardware[-1].pram + i] for i in range(16)]
+        if self.emulator.hardware[-1].palette_ram > 0:
+            data = [self.emulator.ram[self.emulator.hardware[-1].palette_ram + i] for i in range(16)]
 
         palette = []
         for i in range(16):
@@ -150,7 +150,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         for y in range(12):
             for x in range(32):
-                vram = self.emulator.hardware[-1].vram
+                vram = self.emulator.hardware[-1].video_ram
                 val = self.emulator.ram[vram + x + y * 32]
 
                 char = val & 0x007f
@@ -160,7 +160,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
                 char *= 2
 
-                fram = self.emulator.hardware[-1].fram
+                fram = self.emulator.hardware[-1].font_ram
                 if fram == 0:
                     hi = LEM1802_FONT[char]
                     lo = LEM1802_FONT[char + 1]
