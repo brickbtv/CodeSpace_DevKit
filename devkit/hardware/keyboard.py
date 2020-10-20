@@ -40,7 +40,7 @@ class Keyboard(Hardware):
                 self.irq_enabled = True
                 self.irq_code = self.regs.B
         else:
-            raise Exception(f'Unexpected interruption code: {code}')
+            raise Exception(f'[{self.TYPE}] Unexpected interruption code: {code}')
 
     def handle_key_event(self, key, pressed: bool):
         """ Manage keyboard events.

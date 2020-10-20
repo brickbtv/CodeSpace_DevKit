@@ -27,4 +27,4 @@ class Thruster(Hardware):
         if code == 0:
             self.power = self.regs.B & 0xff
         else:
-            raise Exception(f'Unexpected interruption code: {code}')
+            raise Exception(f'[{self.TYPE}] Unexpected interruption code: {code}')

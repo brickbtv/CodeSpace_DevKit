@@ -1,10 +1,12 @@
 import argparse
 import sys
+from enum import Enum
+from pathlib import Path
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import QPoint, QTimer, Qt, QEvent
 from PyQt5.QtGui import QTextCursor, QImage, QPixmap, qRgb
-from PyQt5.QtWidgets import QGraphicsScene, QLabel
+from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox
 
 from constants import LEM1802_FONT, LEM1802_PALETTE
 from decoder import gen_instructions, to_human_readable
@@ -15,20 +17,27 @@ import devkit_ui
 from devkit_code_editor import QCodeEditor
 
 
+class EmulationState(Enum):
+    INITIAL = 0
+    LOADED = 1
+    STEP_REQUESTED = 2
+    STEP_PREFORMED = 3
+    RUN_FAST = 4
+
+
 class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     def __init__(self, filename):
         super().__init__()
+        self.filename = filename
+
         self.setupUi(self)
         self.keyboard.installEventFilter(self)
 
-        self.emulator = Emulator(debug=False)
+        self.emulator = None #Emulator(debug=False)
+        self.emulator_state = EmulationState.INITIAL
 
         if filename:
-            self.load_bin(filename)
-            self.code_editor = self.setup_code_editor()
-
-            self.emulator.preload(filename)
-            self.gen = self.emulator.run_step()
+            self.action_reset()
         else:
             self.gen = None
 
@@ -51,6 +60,39 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         timer.timeout.connect(self.draw_display)
         timer.start()
         self.threads.append(timer)
+
+        self.actionOpenBinFile.triggered.connect(self.action_open_file)
+        self.actionStep.triggered.connect(self.action_step)
+        self.actionRun.triggered.connect(self.action_run)
+        self.actionReset.triggered.connect(self.action_reset)
+
+    def action_open_file(self):
+        home_dir = str(Path.home())
+        filename = QFileDialog.getOpenFileName(self, 'Open file', home_dir, 'BIN files (*.bin)')
+        if filename:
+            self.filename = filename[0]
+            self.action_reset()
+
+
+    def action_step(self):
+        self.emulator_state = EmulationState.STEP_REQUESTED
+
+    def action_run(self):
+        self.emulator_state = EmulationState.RUN_FAST
+
+    def action_reset(self):
+        if self.filename is None:
+            return
+
+        self.emulator = Emulator(debug=False)
+
+        self.load_bin(self.filename)
+        self.code_editor = self.setup_code_editor()
+
+        self.emulator_state = EmulationState.LOADED
+
+        self.emulator.preload(self.filename)
+        self.gen = self.emulator.run_step()
 
     def eventFilter(self, source, event):
         # keyboard support
@@ -89,6 +131,10 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def setup_code_editor(self):
         better_code = QCodeEditor(self.centralwidget, self.pc_to_line)
+
+        # TODO: hack for reset
+        if self.code is None:
+            self.code = self.code_editor
 
         font = QtGui.QFont()
         font.setFamily(self.code.font().family())
@@ -135,11 +181,16 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         return palette
 
     def draw_display(self):
+        if self.emulator is None:
+            return
+
         palette = self.load_palette()
+
+        vram = self.emulator.hardware[-1].video_ram
+        fram = self.emulator.hardware[-1].font_ram
 
         for y in range(12):
             for x in range(32):
-                vram = self.emulator.hardware[-1].video_ram
                 val = self.emulator.ram[vram + x + y * 32]
 
                 char = val & 0x007f
@@ -149,7 +200,6 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
                 char *= 2
 
-                fram = self.emulator.hardware[-1].font_ram
                 if fram == 0:
                     hi = LEM1802_FONT[char]
                     lo = LEM1802_FONT[char + 1]
@@ -157,6 +207,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                     hi = self.emulator.ram[fram + char]
                     lo = self.emulator.ram[fram + char + 1]
 
+                offset_x = x*4
+                offset_y = y*8
                 for xx in range(4):
                     for yy in range(8):
                         b = 2 ** yy
@@ -169,7 +221,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                         else:
                             v = lo & b
 
-                        self.image.setPixel(x*4+xx, y*8+yy, palette[fgcolor] if v else palette[bgcolor])
+                        self.image.setPixel(offset_x+xx, offset_y+yy, palette[fgcolor] if v else palette[bgcolor])
 
         self.scene.addPixmap(QPixmap.fromImage(self.image))
         self.display.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
@@ -207,18 +259,34 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         sensor.update_sensor(data)
 
     def step_instruction(self):
+        if self.emulator_state not in {EmulationState.STEP_REQUESTED, EmulationState.RUN_FAST}:
+            return
+
         if self.gen is None:
             return
 
-        for i in range(1000):
-            pc = next(self.gen)
+        for i in range(100):
+            try:
+                pc = next(self.gen)
+            except Exception as ex:
+                print(f'Exception: {ex}')
+                QMessageBox.warning(self, 'Error', f'Emulator halted. Reason: {ex}')
+                self.action_reset()
 
             cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(self.pc_to_line[pc]))
             self.code_editor.setTextCursor(cursor)
 
-            for i, reg in enumerate(['A', 'B', 'C', 'X', 'Y', 'Z', 'I', 'J', 'SP', 'PC', 'EX', 'IA']):
-                item = self.registers.item(i, 0)
-                item.setText(f'0x{self.emulator.regs[reg]:04x}')
+            if self.emulator_state is EmulationState.STEP_REQUESTED:
+                self.emulator_state = EmulationState.STEP_PREFORMED
+                self._dump_registers()
+                break
+
+        self._dump_registers()
+
+    def _dump_registers(self):
+        for i, reg in enumerate(['A', 'B', 'C', 'X', 'Y', 'Z', 'I', 'J', 'SP', 'PC', 'EX', 'IA']):
+            item = self.registers.item(i, 0)
+            item.setText(f'0x{self.emulator.regs[reg]:04x}')
 
 
 if __name__ == '__main__':

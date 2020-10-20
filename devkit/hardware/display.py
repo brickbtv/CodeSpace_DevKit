@@ -34,7 +34,7 @@ class Display(Hardware):
             for i, data in enumerate(LEM1802_PALETTE):
                 self.ram[self.regs.B + i] = data
         else:
-            raise Exception(f'Unexpected interruption code: {code}')
+            raise Exception(f'[{self.TYPE}] Unexpected interruption code: {code}')
 
     def __repr__(self):
         return f'<Display VRAM: 0x{self.video_ram:04x} FRAM: 0x{self.font_ram:04x} ' \
