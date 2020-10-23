@@ -15,6 +15,7 @@ class OperandType(Enum):
     LABEL = 7
     LABEL_POINTER = 8
     STRING = 9
+    BINARY = 10
 
     @staticmethod
     def determine(operand: str, labels: dict):
@@ -26,6 +27,8 @@ class OperandType(Enum):
             return OperandType.DECIMAL
         elif operand.startswith('0x'):
             return OperandType.HEX
+        elif operand.startswith('0b'):
+            return OperandType.BINARY
         elif operand[0] == '[' and operand[-1] == ']' and '+' in operand:
             return OperandType.REGISTER_PLUS_NEXT_WORD
         elif operand in labels:
@@ -61,7 +64,17 @@ class DCPUTranslator:
 
     def extract_labels(self, filename):
         with open(filename, 'r') as f:
-            return {line.strip()[1:]: 0 for line in f.readlines() if line.startswith(':')}
+            labels = {}
+            for line in f.readlines():
+                line = line.strip()
+                if line.startswith(':'):
+                    other_instr = line.find(' ')
+                    if other_instr != -1:
+                        labels[line[1:other_instr]] = 0
+                    else:
+                        labels[line[1:]] = 0
+
+            return labels
 
     def operand2bin(self, operand: str, labels: dict):
         operand_type = OperandType.determine(operand, labels)
@@ -74,6 +87,8 @@ class DCPUTranslator:
             return 0x1f, int(operand)
         elif operand_type is OperandType.HEX:
             return 0x1f, int(operand, 16)
+        elif operand_type is OperandType.BINARY:
+            return 0x1f, int(operand, 2)
         elif operand_type is OperandType.REGISTER_POINTER:
             return 0x08 + REGISTERS.get(operand[1:-1]), None
         elif operand_type is OperandType.REGISTER_PLUS_NEXT_WORD:
@@ -90,12 +105,23 @@ class DCPUTranslator:
         with open(filename, 'r') as f:
             for line in f.readlines():
                 line = line.strip()
+
+                pos = line.find(';')
+                if pos >= 0:
+                    line = line[:pos]
+
                 if not line or line.startswith(';'):
                     continue
 
                 if line.startswith(':'):
-                    yield line, '__LABEL', line.strip()[1:], None
-                    continue
+                    other_command = line.find(' ')
+
+                    if other_command != -1:
+                        yield line, '__LABEL', line.strip()[1:other_command], None
+                        line = line[other_command:]
+                    else:
+                        yield line, '__LABEL', line.strip()[1:], None
+                        continue
 
                 cmd, param1, param2 = self.parse_line(line)
                 yield line, cmd, param1, param2
