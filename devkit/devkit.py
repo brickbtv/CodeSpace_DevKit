@@ -430,9 +430,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 QCoreApplication.processEvents()
 
             try:
-                if self.emulator not in (EmulationState.STEP_REQUESTED, EmulationState.RUN_FAST):
+                if self.emulator_state not in (EmulationState.STEP_REQUESTED, EmulationState.RUN_FAST):
                     break
-                    
+
                 pc = next(self.next_instruction)
             except Exception as ex:
                 print(f'Exception: {ex}')
