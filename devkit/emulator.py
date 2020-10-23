@@ -66,6 +66,7 @@ class Emulator:
     def run_step(self):
         """ Step-by-step execution """
         for pc, instruction in self.gen_instructions_from_ram():
+            yield pc
             if self._debug:
                 print(to_human_readable(instruction, pc))
 
@@ -79,8 +80,6 @@ class Emulator:
 
             if do_not_inc_pc is False:
                 self.regs.PC += 1
-
-            yield pc
 
     def gen_instructions_from_ram(self):
         """ Generates `Instruction` objects from RAM, manipulates PC while

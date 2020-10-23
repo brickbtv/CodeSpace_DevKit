@@ -3,3 +3,5 @@ __pycache__/
 .idea/
 venv/
 *.bin
+_tmp.asm
+_tmp.bin

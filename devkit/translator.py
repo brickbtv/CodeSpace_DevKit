@@ -103,7 +103,7 @@ class DCPUTranslator:
 
     def gen_lines(self, filename):
         with open(filename, 'r') as f:
-            for line in f.readlines():
+            for line_num, line in enumerate(f.readlines()):
                 line = line.strip()
 
                 pos = line.find(';')
@@ -117,14 +117,14 @@ class DCPUTranslator:
                     other_command = line.find(' ')
 
                     if other_command != -1:
-                        yield line, '__LABEL', line.strip()[1:other_command], None
+                        yield line_num, line, '__LABEL', line.strip()[1:other_command], None
                         line = line[other_command:]
                     else:
-                        yield line, '__LABEL', line.strip()[1:], None
+                        yield line_num, line, '__LABEL', line.strip()[1:], None
                         continue
 
                 cmd, param1, param2 = self.parse_line(line)
-                yield line, cmd, param1, param2
+                yield line_num, line, cmd, param1, param2
 
     def asm2bin(self, filename):
         relocations, _ = self.translate(filename, relocations_info=None)
@@ -141,57 +141,60 @@ class DCPUTranslator:
         program = []
 
         label_pc = 0
-        for line, cmd, param1, param2 in self.gen_lines(filename):
-            # pseudo command for symbol names translation
-            if cmd == '__LABEL':
-                labels_addr[param1] = label_pc
-                continue
+        for line_num, line, cmd, param1, param2 in self.gen_lines(filename):
+            try:
+                # pseudo command for symbol names translation
+                if cmd == '__LABEL':
+                    labels_addr[param1] = label_pc
+                    continue
 
-            if cmd == 'DAT':
-                instructions = []
-                for param in [param1, param2]:
-                    data_type = OperandType.determine(param, labels={})
+                if cmd == 'DAT':
+                    instructions = []
+                    for param in [param1, param2]:
+                        data_type = OperandType.determine(param, labels={})
 
-                    if data_type is OperandType.DECIMAL:
-                        instructions.append(int(param))
-                    elif data_type is OperandType.HEX:
-                        instructions.append(int(param, 16))
-                    elif data_type is OperandType.STRING:
-                        for c in param[1:-1]:
-                            instructions.append(ord(c))
+                        if data_type is OperandType.DECIMAL:
+                            instructions.append(int(param))
+                        elif data_type is OperandType.HEX:
+                            instructions.append(int(param, 16))
+                        elif data_type is OperandType.STRING:
+                            for c in param[1:-1]:
+                                instructions.append(ord(c))
 
-                if instructions:
-                    program.append((line, instructions))
+                    if instructions:
+                        program.append((line_num, line, instructions))
+
+                    label_pc += len(instructions)
+
+                    continue
+
+                is_basic_op = True
+                code = MNEMONIC_TO_CODE.get(cmd)
+                if not code:
+                    code = SPECIAL_MNEMONICS_TO_CODE.get(cmd) << 5
+                    is_basic_op = False
+
+                param1coded, nw1 = self.operand2bin(param1, relocations_info)
+                param2coded, nw2 = self.operand2bin(param2, relocations_info)
+
+                if is_basic_op:
+                    code = code | param1coded << 5 | param2coded << 10
+                else:
+                    code = code | param1coded << 10
+
+                instructions = [code]
+
+                if nw2 is not None:
+                    instructions.append(nw2)
+
+                if nw1 is not None:
+                    instructions.append(nw1)
+
+                program.append((line_num, line, instructions))
 
                 label_pc += len(instructions)
-
-                continue
-
-            is_basic_op = True
-            code = MNEMONIC_TO_CODE.get(cmd)
-            if not code:
-                code = SPECIAL_MNEMONICS_TO_CODE.get(cmd) << 5
-                is_basic_op = False
-
-            param1coded, nw1 = self.operand2bin(param1, relocations_info)
-            param2coded, nw2 = self.operand2bin(param2, relocations_info)
-
-            if is_basic_op:
-                code = code | param1coded << 5 | param2coded << 10
-            else:
-                code = code | param1coded << 10
-
-            instructions = [code]
-
-            if nw2 is not None:
-                instructions.append(nw2)
-
-            if nw1 is not None:
-                instructions.append(nw1)
-
-            program.append((line, instructions))
-
-            label_pc += len(instructions)
+            except Exception as ex:
+                raise Exception(f'LINE: {line_num}     {line}    ERROR: {ex}')
 
         return labels_addr, program
 
@@ -207,7 +210,7 @@ if __name__ == '__main__':
     if args.debug:
         print('PC     HEX    BIN                ASM')
         pc = 0
-        for line, instructions in translator.asm2bin(args.filename):
+        for line_num, line, instructions in translator.asm2bin(args.filename):
             for instruction_num, code in enumerate(instructions):
                 if instruction_num == 0:
                     print('0x{:04x}'.format(pc), '0x{:04x}'.format(code), '0x{:016b}'.format(code), line)

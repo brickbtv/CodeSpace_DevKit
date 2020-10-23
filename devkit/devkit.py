@@ -1,6 +1,7 @@
 import argparse
 import sys
 from enum import Enum
+from io import BytesIO
 from pathlib import Path
 
 from PyQt5 import QtWidgets, QtGui
@@ -15,7 +16,8 @@ from emulator import Emulator
 from hardware import Keyboard, Sensor
 import devkit_ui
 
-from devkit_code_editor import QCodeEditor
+from devkit_code_editor import QCodeEditor, PythonHighlighter
+from translator import DCPUTranslator
 
 
 class EmulationState(Enum):
@@ -26,18 +28,29 @@ class EmulationState(Enum):
     RUN_FAST = 4
 
 
+class DevKitMode(Enum):
+    BIN = 0
+    ASM = 1
+
+
 class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     emulator = None
     image = None
     scene = None
     emulator_state = EmulationState.INITIAL
     timers = []
+    mode = None
 
-    def __init__(self, binfile):
+    def __init__(self, filename):
         super().__init__()
 
         self.next_instruction = None
-        self.binfile = binfile
+        self.filename = filename
+
+        if self.filename and self.filename.endswith('.bin'):
+            self.mode = DevKitMode.BIN
+        else:
+            self.mode = DevKitMode.ASM
 
         self.setupUi(self)
 
@@ -61,7 +74,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.keyboard.installEventFilter(self)
 
     def setup_emulator(self):
-        if self.binfile:
+        if self.filename:
             self.action_reset()
 
         emu_timer = QTimer(self)
@@ -95,30 +108,53 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def action_open_file(self):
         home_dir = str(Path.home())
-        filename = QFileDialog.getOpenFileName(self, 'Open file', home_dir, 'BIN files (*.bin)')
+        filename = QFileDialog.getOpenFileName(self, 'Open file', home_dir, 'DCPU files (*.bin *.dasm)')
         if filename:
-            self.binfile = filename[0]
+            self.filename = filename[0]
+            if self.filename.endswith(('.bin', '.rom')):
+                self.mode = DevKitMode.BIN
+            else:
+                self.mode = DevKitMode.ASM
+
             self.action_reset()
 
     def action_step(self):
+        if self.code_editor.isEnabled() and self.mode is DevKitMode.ASM:
+            self.retranslate()
+            self.code_editor.setEnabled(False)
+
         self.emulator_state = EmulationState.STEP_REQUESTED
 
     def action_run(self):
+        if self.code_editor.isEnabled() and self.mode is DevKitMode.ASM:
+            self.retranslate()
+            self.code_editor.setEnabled(False)
+
         self.emulator_state = EmulationState.RUN_FAST
 
     def action_reset(self):
         self.last_frame = []
-        if self.binfile is None:
+        if self.filename is None:
             return
 
         self.emulator = Emulator(debug=False)
 
-        self.load_bin(self.binfile)
-        self.code_editor = self.setup_code_editor()
+        if self.emulator_state in (EmulationState.INITIAL, EmulationState.LOADED) or self.mode is DevKitMode.BIN:
+            filename = self.filename
+        else:
+            filename = '_tmp.asm'
+
+        self.load_file(filename)
+        self.code_editor = self.setup_code_editor(filename)
 
         self.emulator_state = EmulationState.LOADED
 
-        self.emulator.preload(self.binfile)
+        self.code_editor.setEnabled(self.mode is DevKitMode.ASM)
+
+
+        if self.mode is DevKitMode.BIN:
+            self.emulator.preload(self.filename)
+
         self.next_instruction = self.emulator.run_step()
 
     def eventFilter(self, source, event):
@@ -156,9 +192,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         return super().eventFilter(source, event)
 
-    def setup_code_editor(self):
+    def setup_code_editor(self, filename):
         """ Replaces basic text editor widget by custom code editor widget """
-        better_code = QCodeEditor(self.centralwidget, self.pc_to_line)
+        better_code = QCodeEditor(self.centralwidget, self.pc_to_line, self.mode is DevKitMode.ASM)
 
         # TODO: hack for reset
         if self.code is None:
@@ -170,31 +206,78 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         better_code.setFont(font)
         better_code.setObjectName("code")
+        better_code.setLineWrapMode(better_code.NoWrap)
+        better_code.setTabStopWidth(30)
 
         self.horizontalLayout.replaceWidget(self.code, better_code)
 
         self.code.deleteLater()
         self.code = None
 
-        for line in self.lines:
-            better_code.appendPlainText(line)
+        if self.mode is DevKitMode.BIN:
+            for line in self.lines:
+                better_code.appendPlainText(line)
+            better_code.setEnabled(False)
+        else:
+            with open(filename) as f:
+                for line in f.readlines():
+                    better_code.appendPlainText(line.rstrip())
+
+            better_code.setEnabled(True)
 
         cursor = better_code.cursorForPosition(QPoint(0, 0))
         better_code.setTextCursor(cursor)
 
+        self.hl = PythonHighlighter(better_code.document())
+
         return better_code
 
-    def load_bin(self, filename):
+    def retranslate(self):
+        try:
+            self._retranslate()
+        except Exception as ex:
+            QMessageBox.warning(self, 'Translation Error', str(ex))
+
+    def _retranslate(self):
+        data = self.code_editor.toPlainText()
+        with open('_tmp.asm', 'w') as f:
+            f.write(data)
+
+        tr = DCPUTranslator()
+        with open('_tmp.bin', 'wb') as f:
+            for _, _, instructions in tr.asm2bin('_tmp.asm'):
+                for code in instructions:
+                    f.write(code.to_bytes(2, byteorder='little'))
+
+        self.emulator.preload('_tmp.bin')
+
+        # all steps successful, so, we can save original file
+        with open(self.filename, 'w') as f:
+            f.write(data)
+
+    def load_file(self, filename):
         """ Reads .bin file, decodes instructions
             saves PC-to-instruction info.
         """
         self.pc_to_line = {}
         self.lines = []
 
-        for line_num, (pc, instruction) in enumerate(gen_instructions(filename)):
-            line = to_human_readable(instruction, pc, extended=False)
-            self.lines.append(line)
-            self.pc_to_line[pc] = line_num
+        if filename.endswith(('.bin', '.rom')):
+            for line_num, (pc, instruction) in enumerate(gen_instructions(filename)):
+                line = to_human_readable(instruction, pc, extended=False)
+                self.lines.append(line)
+                self.pc_to_line[pc] = line_num
+        else:
+            # translate and then load
+            translator = DCPUTranslator()
+            try:
+                pc = 0
+                for line_num, line, instructions in translator.asm2bin(filename):
+                    self.pc_to_line[pc] = line_num
+                    pc += len(instructions)
+
+            except Exception as ex:
+                print(ex)
 
     # hack for save some cycles while drawing
     last_frame = []
@@ -268,6 +351,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         return True
 
     def update_hardware_ui(self):
+        if not self.emulator:
+            return
         # set thrusters UI
         thrusters = [
             self.thruster0,
@@ -333,8 +418,14 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 self.emulator_state = EmulationState.STEP_PREFORMED
                 self._dump_registers()
 
-                cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(self.pc_to_line[pc]))
+                try:
+                    selectline = self.pc_to_line[pc]
+                except:
+                    break
+
+                cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(selectline))
                 self.code_editor.setTextCursor(cursor)
+                QCoreApplication.processEvents()
                 break
 
         self._dump_registers()

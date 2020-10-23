@@ -32,6 +32,9 @@
         <pointsize>8</pointsize>
        </font>
       </property>
+      <property name="lineWrapMode">
+       <enum>QPlainTextEdit::NoWrap</enum>
+      </property>
      </widget>
     </item>
     <item>
@@ -552,7 +555,7 @@
   </widget>
   <action name="actionOpenBinFile">
    <property name="text">
-    <string>OpenBinFile</string>
+    <string>OpenFile</string>
    </property>
   </action>
   <action name="actionRun">
