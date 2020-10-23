@@ -7,8 +7,9 @@ from pathlib import Path
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import QPoint, QTimer, Qt, QEvent, QCoreApplication, \
     QByteArray
-from PyQt5.QtGui import QTextCursor, QImage, QPixmap, qRgb
-from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox
+from PyQt5.QtGui import QTextCursor, QImage, QPixmap, qRgb, QKeySequence
+from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, \
+    QShortcut
 
 from constants import LEM1802_FONT, LEM1802_PALETTE
 from decoder import gen_instructions, to_human_readable
@@ -109,7 +110,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     def action_open_file(self):
         home_dir = str(Path.home())
         filename = QFileDialog.getOpenFileName(self, 'Open file', home_dir, 'DCPU files (*.bin *.dasm)')
-        if filename:
+        if filename and filename[0]:
             self.filename = filename[0]
             if self.filename.endswith(('.bin', '.rom')):
                 self.mode = DevKitMode.BIN
@@ -124,6 +125,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.code_editor.setEnabled(False)
 
         self.emulator_state = EmulationState.STEP_REQUESTED
+        self.actionReset.setEnabled(True)
 
     def action_run(self):
         if self.code_editor.isEnabled() and self.mode is DevKitMode.ASM:
@@ -131,6 +133,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.code_editor.setEnabled(False)
 
         self.emulator_state = EmulationState.RUN_FAST
+        self.actionReset.setEnabled(True)
 
     def action_reset(self):
         self.last_frame = []
@@ -156,6 +159,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.emulator.preload(self.filename)
 
         self.next_instruction = self.emulator.run_step()
+        self.actionReset.setEnabled(False)
 
     def eventFilter(self, source, event):
         # keyboard support
@@ -230,7 +234,19 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         self.hl = PythonHighlighter(better_code.document())
 
+        shortcut = QShortcut(QKeySequence("Ctrl+S"), better_code)
+        shortcut.activated.connect(self.save_file)
+
         return better_code
+
+    def closeEvent(self, event):
+        self.save_file()
+
+    def save_file(self):
+        if self.mode is DevKitMode.ASM:
+            data = self.code_editor.toPlainText()
+            with open(self.filename, 'w') as f:
+                f.write(data)
 
     def retranslate(self):
         try:
@@ -243,12 +259,19 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         with open('_tmp.asm', 'w') as f:
             f.write(data)
 
+        self.pc_to_line = {}
+
         tr = DCPUTranslator()
         with open('_tmp.bin', 'wb') as f:
-            for _, _, instructions in tr.asm2bin('_tmp.asm'):
+            pc = 0
+            for line_num, _, instructions in tr.asm2bin('_tmp.asm'):
                 for code in instructions:
                     f.write(code.to_bytes(2, byteorder='little'))
+                    # TODO: refactor this
+                self.pc_to_line[pc] = line_num
+                pc += len(instructions)
 
+        # self.load_file('_tmp.bin')
         self.emulator.preload('_tmp.bin')
 
         # all steps successful, so, we can save original file
