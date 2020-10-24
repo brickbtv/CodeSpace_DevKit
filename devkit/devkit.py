@@ -434,7 +434,10 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 if self.emulator_state not in (EmulationState.STEP_REQUESTED, EmulationState.RUN_FAST):
                     break
 
-                pc = next(self.next_instruction)
+                pc, is_brk = next(self.next_instruction)
+                if is_brk:
+                    self.emulator_state = EmulationState.STEP_REQUESTED
+
             except Exception as ex:
                 print(f'Exception: {ex}')
                 QMessageBox.warning(self, 'Error', f'Emulator halted. Reason: {ex}')

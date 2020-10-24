@@ -88,7 +88,7 @@ SPECIAL_MNEMONICS_TO_CODE = {
     'unused23': 0x1c,
     'unused24': 0x1d,
     'unused25': 0x1e,
-    'unused26': 0x1f,
+    'BRK': 0x1f,
 }
 
 BIN2OPCODE = {v: k for k, v in MNEMONIC_TO_CODE.items()}

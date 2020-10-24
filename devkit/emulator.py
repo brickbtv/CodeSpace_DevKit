@@ -66,7 +66,8 @@ class Emulator:
     def run_step(self):
         """ Step-by-step execution """
         for pc, instruction in self.gen_instructions_from_ram():
-            yield pc
+            yield pc, instruction.cmd == 'BRK'
+
             if self._debug:
                 print(to_human_readable(instruction, pc))
 
@@ -356,6 +357,10 @@ class Emulator:
         hwnum = a
         device = self.hardware[hwnum]
         device.handle_interruption()
+
+    @instruction
+    def brk(self, _, __,___):
+        pass
 
     def skip_next_instruction(self):
         """ Used in branch operations. Chain nested jumps. """

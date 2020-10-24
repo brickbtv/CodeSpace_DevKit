@@ -134,6 +134,7 @@ STYLES = {
     'label': format('magenta'),
     'comment': format('darkGreen', 'italic'),
     'numbers': format('brown'),
+    'breakpoint': format('red', 'bold')
 }
 
 
@@ -177,7 +178,8 @@ class PythonHighlighter(QSyntaxHighlighter):
             (r'\b[+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?\b', 0, STYLES['numbers']),
 
             # Labels
-            (r'\:[a-zA-Z0-9_]+', 0, STYLES['label'])
+            (r'\:[a-zA-Z0-9_]+', 0, STYLES['label']),
+            (r'^\s?BRK', 0, STYLES['breakpoint']),
         ]
 
         # Build a QRegExp for each pattern
