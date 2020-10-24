@@ -399,14 +399,14 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         # update sensors from UI
         data = []
         for i in range(7):
-            type = self.contacts.item(i, 0)
+            type_ = self.contacts.item(i, 0)
             size = self.contacts.item(i, 1)
             range_ = self.contacts.item(i, 2)
             angle = self.contacts.item(i, 3)
 
             try:
                 data.append({
-                    'type': int(type.text(), 16),
+                    'type': int(type_.text(), 16),
                     'size': int(size.text(), 16),
                     'range': int(range_.text(), 16),
                     'angle': int(angle.text(), 16),
@@ -414,8 +414,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             except Exception:
                 continue
 
-        sensor: Sensor = self.emulator.hardware[-3]
-        sensor.update_sensor(data)
+        sensor: Sensor = self.emulator.get_hardware_by_name('sensor')
+        if sensor:
+            sensor.update_sensor(data)
 
     def step_instruction(self):
         if self.emulator_state not in {EmulationState.STEP_REQUESTED, EmulationState.RUN_FAST}:

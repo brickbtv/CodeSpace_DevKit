@@ -1,5 +1,6 @@
 import argparse
 from enum import Enum
+from functools import lru_cache
 from typing import Optional
 
 from constants import BIN2OPCODE, BIN2SPECTIAL, BIN2REGISTERS
@@ -49,6 +50,7 @@ def need_next_word(operand: Optional[int]) -> bool:
     return operand in {0x1a, 0x1f, 0x1e} or 0x10 <= operand <= 0x17
 
 
+@lru_cache
 def describe_instruction(code, disasm=False) -> (str, int, int, bool, bool):
     """ Decodes instruction first word:
 
