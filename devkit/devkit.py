@@ -309,7 +309,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     last_pram = []
 
     def draw_display(self):
-        if self.emulator is None:
+        if self.emulator is None or self.emulator_state in (EmulationState.INITIAL, EmulationState.LOADED):
             return
 
         display_hw = self.emulator.get_hardware_by_name('display')
