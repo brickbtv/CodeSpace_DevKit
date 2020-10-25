@@ -53,6 +53,7 @@ class DCPUTranslator:
     OPCODE_LEN = 3
 
     def parse_line(self, line: str):
+        line = line.strip()
         command, args = line[:self.OPCODE_LEN], line[self.OPCODE_LEN:]
 
         params = args.split(',')[:2]
