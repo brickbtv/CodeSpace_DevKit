@@ -87,6 +87,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     def setup_display(self):
         self.image = QImage(128, 96, QImage.Format_RGB32)
         self.scene = QGraphicsScene()
+        self.scene.addPixmap(QPixmap.fromImage(self.image))
 
         self.display.setScene(self.scene)
         self.display.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
@@ -359,6 +360,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
                         self.image.setPixel(offset_x+xx, offset_y+yy, palette[fgcolor] if v else palette[bgcolor])
 
+        self.scene.clear()
         self.scene.addPixmap(QPixmap.fromImage(self.image))
         self.display.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
 
