@@ -1,17 +1,13 @@
 import argparse
 import sys
 from enum import Enum
-from io import BytesIO
 from pathlib import Path
 
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import QPoint, QTimer, Qt, QEvent, QCoreApplication, \
-    QByteArray
+from PyQt5.QtCore import QPoint, QTimer, Qt, QEvent, QCoreApplication
 from PyQt5.QtGui import QTextCursor, QImage, QPixmap, qRgb, QKeySequence
-from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, \
-    QShortcut
+from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QShortcut
 
-from constants import LEM1802_FONT, LEM1802_PALETTE
 from decoder import gen_instructions, to_human_readable
 from emulator import Emulator
 from hardware import Keyboard, Sensor
@@ -121,17 +117,17 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.action_reset()
 
     def action_step(self):
-        if self.code_editor.isEnabled() and self.mode is DevKitMode.ASM:
+        if self.code.isEnabled() and self.mode is DevKitMode.ASM:
             self.retranslate()
-            self.code_editor.setEnabled(False)
+            self.code.setEnabled(False)
 
         self.emulator_state = EmulationState.STEP_REQUESTED
         self.actionReset.setEnabled(True)
 
     def action_run(self):
-        if self.code_editor.isEnabled() and self.mode is DevKitMode.ASM:
+        if self.code.isEnabled() and self.mode is DevKitMode.ASM:
             self.retranslate()
-            self.code_editor.setEnabled(False)
+            self.code.setEnabled(False)
 
         self.emulator_state = EmulationState.RUN_FAST
         self.actionReset.setEnabled(True)
@@ -149,11 +145,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             filename = '_tmp.asm'
 
         self.load_file(filename)
-        self.code_editor = self.setup_code_editor(filename)
+        self.setup_code_editor(filename)
 
         self.emulator_state = EmulationState.LOADED
 
-        self.code_editor.setEnabled(self.mode is DevKitMode.ASM)
+        self.code.setEnabled(self.mode is DevKitMode.ASM)
 
 
         if self.mode is DevKitMode.BIN:
@@ -199,11 +195,10 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def setup_code_editor(self, filename):
         """ Replaces basic text editor widget by custom code editor widget """
-        better_code = QCodeEditor(self.centralwidget, self.pc_to_line, self.mode is DevKitMode.ASM)
+        if isinstance(self.code, QCodeEditor) and self.mode is DevKitMode.ASM:
+            return
 
-        # TODO: hack for reset
-        if self.code is None:
-            self.code = self.code_editor
+        better_code = QCodeEditor(self.centralwidget, self.pc_to_line, self.mode is DevKitMode.ASM)
 
         font = QtGui.QFont()
         font.setFamily(self.code.font().family())
@@ -238,14 +233,14 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         shortcut = QShortcut(QKeySequence("Ctrl+S"), better_code)
         shortcut.activated.connect(self.save_file)
 
-        return better_code
+        self.code = better_code
 
     def closeEvent(self, event):
         self.save_file()
 
     def save_file(self):
         if self.mode is DevKitMode.ASM:
-            data = self.code_editor.toPlainText()
+            data = self.code.toPlainText()
             with open(self.filename, 'w') as f:
                 f.write(data)
 
@@ -256,7 +251,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             QMessageBox.warning(self, 'Translation Error', str(ex))
 
     def _retranslate(self):
-        data = self.code_editor.toPlainText()
+        data = self.code.toPlainText()
         with open('_tmp.asm', 'w') as f:
             f.write(data)
 
@@ -455,8 +450,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 except:
                     break
 
-                cursor = QTextCursor(self.code_editor.document().findBlockByLineNumber(selectline))
-                self.code_editor.setTextCursor(cursor)
+                cursor = QTextCursor(self.code.document().findBlockByLineNumber(selectline))
+                self.code.setTextCursor(cursor)
                 QCoreApplication.processEvents()
                 break
 
