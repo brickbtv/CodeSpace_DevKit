@@ -128,17 +128,18 @@ class Emulator:
             must be queued.
         """
 
-        keyboard = self.get_hardware_by_name('keyboard')
-        if not keyboard:
-            return
+        for hw in {'keyboard', 'door'}:
+            hardware = self.get_hardware_by_name(hw)
+            if not hardware:
+                return
 
-        if keyboard.interruptions and self.on_interruption_now is False:
-            self.stack_push(self.regs.PC)
-            self.stack_push(self.regs.A)
+            if hardware.interruptions and self.on_interruption_now is False:
+                self.stack_push(self.regs.PC)
+                self.stack_push(self.regs.A)
 
-            self.regs.A = keyboard.interruptions.pop()
-            self.regs.PC = self.regs.IA
-            self.on_interruption_now = True
+                self.regs.A = hardware.interruptions.pop()
+                self.regs.PC = self.regs.IA
+                self.on_interruption_now = True
 
     def exec_instruction(self, inst, b, a):
         cmd = inst.cmd
