@@ -2,7 +2,7 @@ from hardware import Registers, RAM
 from hardware.common import Hardware
 
 
-class Anthenna(Hardware):
+class Antenna(Hardware):
     """
         Antenna
         =======
@@ -40,7 +40,7 @@ class Anthenna(Hardware):
     ID = 0x74CFC5A3
     VERSION = 0x0001
     VENDOR = 0x54482b2b
-    TYPE = 'anthenna'
+    TYPE = 'antenna'
 
     def __init__(self, regs: Registers, ram: RAM):
         super().__init__(regs, ram)

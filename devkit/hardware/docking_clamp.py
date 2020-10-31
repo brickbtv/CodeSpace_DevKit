@@ -45,7 +45,7 @@ class DockingClamp(Hardware):
             clamp = self.regs.I
             if clamp > 4:
                 return
-            self.mode[clamp] = self.regs.B
+            self.mode[clamp] = DockingClamp.Modes(self.regs.B)
         elif code == 2:
             self.irq_code = self.regs.B
             self.irq_enabled = bool(self.irq_code != 0)

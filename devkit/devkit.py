@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QS
 
 from decoder import gen_instructions, to_human_readable
 from emulator import Emulator
-from hardware import Keyboard, Sensor, Door, Anthenna
+from hardware import Keyboard, Sensor, Door, DockingClamp, Antenna
 import devkit_ui
 
 from devkit_code_editor import QCodeEditor, PythonHighlighter
@@ -56,6 +56,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.setup_emulator()
         self.setup_keyboard()
         self.setup_doors()
+        self.setup_antenna()
         self.setup_hardware()
 
         # menu buttons
@@ -71,6 +72,14 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def setup_keyboard(self):
         self.keyboard.installEventFilter(self)
+
+    def setup_antenna(self):
+        self.send_msg.pressed.connect(self.send_antenna_msg)
+
+    def send_antenna_msg(self):
+        antenna: Antenna = self.emulator.get_hardware_by_name('antenna')
+        antenna.recv_buffer.append([ord(c) for c in self.recv_buffer.text()])
+        self.recv_buffer.clear()
 
     def setup_emulator(self):
         if self.filename:
@@ -138,9 +147,10 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 self.mode = DevKitMode.ASM
 
             self.code.clear()
-            with open(self.filename) as f:
-                for line in f.readlines():
-                    self.code.appendPlainText(line.rstrip())
+            if self.mode == DevKitMode.ASM:
+                with open(self.filename) as f:
+                    for line in f.readlines():
+                        self.code.appendPlainText(line.rstrip())
 
             self.action_reset()
 
@@ -447,6 +457,17 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.door_head.setText(f'Door {doors.mode[0].name}')
             self.door_left.setText(f'Door {doors.mode[1].name}')
             self.door_right.setText(f'Door {doors.mode[2].name}')
+
+        clamps: DockingClamp = self.emulator.get_hardware_by_name('docking_clamp')
+        if clamps:
+            self.clamp_l_u.setText(f'Clamp {clamps.mode[0].name}')
+            self.clamp_l_d.setText(f'Clamp {clamps.mode[1].name}')
+            self.clamp_r_u.setText(f'Clamp {clamps.mode[2].name}')
+            self.clamp_r_d.setText(f'Clamp {clamps.mode[3].name}')
+
+        antenna: Antenna = self.emulator.get_hardware_by_name('anthenna')
+        if antenna:
+            self.send_buffer.setText(str(antenna.send_buffer))
 
     def step_instruction(self):
         if self.emulator_state not in {EmulationState.STEP_REQUESTED, EmulationState.RUN_FAST}:

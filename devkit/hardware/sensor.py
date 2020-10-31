@@ -43,12 +43,16 @@ class Sensor(Hardware):
         elif code == 0:
             try:
                 contact = self.contacts.pop()
-                self.regs.B = contact['type']
+                self.regs.A = contact['type']
+                self.regs.B = 1
+                self.regs.C = 2
                 self.regs.X = contact['angle']
                 self.regs.Y = contact['range']
                 self.regs.Z = contact['size']
             except IndexError:
+                self.regs.A = 0
                 self.regs.B = 0
+                self.regs.C = 0
                 self.regs.X = 0
                 self.regs.Y = 0
                 self.regs.Z = 0

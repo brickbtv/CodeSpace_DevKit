@@ -266,7 +266,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>2</number>
+          <number>3</number>
          </property>
          <widget class="QWidget" name="tab">
           <attribute name="title">
@@ -651,7 +651,18 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="recv_buffer"/>
+            <layout class="QHBoxLayout" name="horizontalLayout_7">
+             <item>
+              <widget class="QLineEdit" name="recv_buffer"/>
+             </item>
+             <item>
+              <widget class="QPushButton" name="send_msg">
+               <property name="text">
+                <string>add</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <widget class="QLabel" name="label_3">
@@ -675,7 +686,7 @@
              <property name="sizeHint" stdset="0">
               <size>
                <width>20</width>
-               <height>225</height>
+               <height>223</height>
               </size>
              </property>
             </spacer>

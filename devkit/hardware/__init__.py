@@ -6,7 +6,7 @@ from hardware.sensor import Sensor
 from hardware.thruster import Thruster
 from hardware.door import Door
 from hardware.docking_clamp import DockingClamp
-from hardware.anthenna import Anthenna
+from hardware.antenna import Antenna
 
 __all__ = [
     'Display',
@@ -17,5 +17,5 @@ __all__ = [
     'Thruster',
     'Door',
     'DockingClamp',
-    'Anthenna',
+    'Antenna',
 ]
