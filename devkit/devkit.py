@@ -1,6 +1,7 @@
 import argparse
 import sys
 from enum import Enum
+from functools import partial
 from pathlib import Path
 
 from PyQt5 import QtWidgets, QtGui
@@ -54,6 +55,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.setup_display()
         self.setup_emulator()
         self.setup_keyboard()
+        self.setup_doors()
         self.setup_hardware()
 
         # menu buttons
@@ -93,6 +95,27 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         timer.timeout.connect(self.draw_display)
         timer.start()
         self.timers.append(timer)
+
+    def setup_doors(self):
+        self.door_state_head.currentIndexChanged.connect(partial(self.change_door_state, 0))
+        self.door_state_left.currentIndexChanged.connect(partial(self.change_door_state, 1))
+        self.door_state_right.currentIndexChanged.connect(partial(self.change_door_state, 2))
+
+    def change_door_state(self, door_id):
+        state = 0
+        if door_id == 0:
+            state = self.door_state_head.currentIndex()
+        elif door_id == 1:
+            state = self.door_state_left.currentIndex()
+        elif door_id == 2:
+            state = self.door_state_right.currentIndex()
+
+        # hack
+        if state == 3:
+            state = 4
+
+        doors: Door = self.emulator.get_hardware_by_name('door')
+        doors.change_state(door_id, Door.States(state))
 
     def setup_hardware(self):
         timer = QTimer(self)
@@ -424,7 +447,6 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.door_head.setText(f'Door {doors.mode[0].name}')
             self.door_left.setText(f'Door {doors.mode[1].name}')
             self.door_right.setText(f'Door {doors.mode[2].name}')
-
 
     def step_instruction(self):
         if self.emulator_state not in {EmulationState.STEP_REQUESTED, EmulationState.RUN_FAST}:

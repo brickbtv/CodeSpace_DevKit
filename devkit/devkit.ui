@@ -256,6 +256,9 @@
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
         <widget class="QTabWidget" name="tabWidget">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
            <horstretch>0</horstretch>
@@ -263,7 +266,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>0</number>
+          <number>2</number>
          </property>
          <widget class="QWidget" name="tab">
           <attribute name="title">
@@ -514,6 +517,9 @@
           </layout>
          </widget>
          <widget class="QWidget" name="tab_3">
+          <property name="enabled">
+           <bool>true</bool>
+          </property>
           <attribute name="title">
            <string>Doors</string>
           </attribute>
@@ -524,33 +530,6 @@
               <string>Cockpit door</string>
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_4">
-              <item>
-               <widget class="QComboBox" name="door_mode_head">
-                <property name="currentIndex">
-                 <number>2</number>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>Closed</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>On proximity inside</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>On proximity</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Opened</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
               <item>
                <widget class="QComboBox" name="door_state_head">
                 <item>
@@ -585,33 +564,6 @@
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_5">
               <item>
-               <widget class="QComboBox" name="door_mode_left">
-                <property name="currentIndex">
-                 <number>2</number>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>Closed</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>On proximity inside</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>On proximity</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Opened</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item>
                <widget class="QComboBox" name="door_state_left">
                 <item>
                  <property name="text">
@@ -644,33 +596,6 @@
               <string>Right door</string>
              </property>
              <layout class="QHBoxLayout" name="horizontalLayout_6">
-              <item>
-               <widget class="QComboBox" name="door_mode_right">
-                <property name="currentIndex">
-                 <number>2</number>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>Closed</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>On proximity inside</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>On proximity</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Opened</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
               <item>
                <widget class="QComboBox" name="door_state_right">
                 <item>

@@ -54,7 +54,7 @@ class Door(Hardware):
 
     class States(Enum):
         DEFAULT = 0
-        PROXIMITY_DETECTED_INSIDE = 0
+        PROXIMITY_DETECTED_INSIDE = 1
         PROXIMITY_DETECTED = 2
         IS_OPENED = 4
 
@@ -74,7 +74,8 @@ class Door(Hardware):
             door = self.regs.I
             if door > 3:
                 return
-            self.regs.B = (self.mode[door].value() << 8) & self.state[door].value()
+
+            self.regs.B = (self.mode[door].value << 8) | self.state[door].value
         elif code == 1:
             door = self.regs.I
             if door > 3:
