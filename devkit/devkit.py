@@ -114,6 +114,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             else:
                 self.mode = DevKitMode.ASM
 
+            self.code.clear()
+            with open(self.filename) as f:
+                for line in f.readlines():
+                    self.code.appendPlainText(line.rstrip())
+
             self.action_reset()
 
     def action_step(self):
@@ -150,7 +155,6 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.emulator_state = EmulationState.LOADED
 
         self.code.setEnabled(self.mode is DevKitMode.ASM)
-
 
         if self.mode is DevKitMode.BIN:
             self.emulator.preload(self.filename)
