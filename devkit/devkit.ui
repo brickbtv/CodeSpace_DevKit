@@ -263,7 +263,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>3</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="tab">
           <attribute name="title">
@@ -736,7 +736,11 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="send_buffer"/>
+            <widget class="QLineEdit" name="send_buffer">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+            </widget>
            </item>
            <item>
             <spacer name="verticalSpacer_2">
@@ -914,92 +918,113 @@
          <widget class="QLabel" name="door_left">
           <property name="geometry">
            <rect>
-            <x>90</x>
-            <y>200</y>
-            <width>67</width>
+            <x>0</x>
+            <y>210</y>
+            <width>181</width>
             <height>17</height>
            </rect>
           </property>
           <property name="text">
            <string>Door</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
          <widget class="QLabel" name="door_right">
           <property name="geometry">
            <rect>
-            <x>230</x>
-            <y>200</y>
-            <width>67</width>
+            <x>210</x>
+            <y>210</y>
+            <width>221</width>
             <height>17</height>
            </rect>
           </property>
           <property name="text">
            <string>Door</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
          <widget class="QLabel" name="door_head">
           <property name="geometry">
            <rect>
-            <x>150</x>
-            <y>160</y>
-            <width>67</width>
+            <x>50</x>
+            <y>150</y>
+            <width>271</width>
             <height>17</height>
            </rect>
           </property>
           <property name="text">
            <string>Door</string>
           </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
+          </property>
          </widget>
          <widget class="QLabel" name="clamp_l_u">
           <property name="geometry">
            <rect>
-            <x>40</x>
+            <x>-10</x>
             <y>170</y>
-            <width>67</width>
+            <width>181</width>
             <height>17</height>
            </rect>
           </property>
           <property name="text">
            <string>Clamp</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
          <widget class="QLabel" name="clamp_l_d">
           <property name="geometry">
            <rect>
-            <x>40</x>
+            <x>-10</x>
             <y>250</y>
-            <width>67</width>
+            <width>181</width>
             <height>17</height>
            </rect>
           </property>
           <property name="text">
            <string>Clamp</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
          <widget class="QLabel" name="clamp_r_u">
           <property name="geometry">
            <rect>
-            <x>280</x>
+            <x>230</x>
             <y>170</y>
-            <width>67</width>
+            <width>211</width>
             <height>17</height>
            </rect>
           </property>
           <property name="text">
            <string>Clamp</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
          <widget class="QLabel" name="clamp_r_d">
           <property name="geometry">
            <rect>
-            <x>280</x>
+            <x>230</x>
             <y>250</y>
-            <width>67</width>
+            <width>201</width>
             <height>17</height>
            </rect>
           </property>
           <property name="text">
            <string>Clamp</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignCenter</set>
           </property>
          </widget>
         </widget>

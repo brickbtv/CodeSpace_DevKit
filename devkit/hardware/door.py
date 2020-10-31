@@ -79,7 +79,7 @@ class Door(Hardware):
             door = self.regs.I
             if door > 3:
                 return
-            self.mode[door] = self.regs.B
+            self.mode[door] = self.Modes(self.regs.B)
         elif code == 2:
             self.irq_code = self.regs.B
             self.irq_enabled = bool(self.irq_code != 0)

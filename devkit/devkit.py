@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QS
 
 from decoder import gen_instructions, to_human_readable
 from emulator import Emulator
-from hardware import Keyboard, Sensor
+from hardware import Keyboard, Sensor, Door, Anthenna
 import devkit_ui
 
 from devkit_code_editor import QCodeEditor, PythonHighlighter
@@ -418,6 +418,13 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         sensor: Sensor = self.emulator.get_hardware_by_name('sensor')
         if sensor:
             sensor.update_sensor(data)
+
+        doors: Door = self.emulator.get_hardware_by_name('door')
+        if doors:
+            self.door_head.setText(f'Door {doors.mode[0].name}')
+            self.door_left.setText(f'Door {doors.mode[1].name}')
+            self.door_right.setText(f'Door {doors.mode[2].name}')
+
 
     def step_instruction(self):
         if self.emulator_state not in {EmulationState.STEP_REQUESTED, EmulationState.RUN_FAST}:
