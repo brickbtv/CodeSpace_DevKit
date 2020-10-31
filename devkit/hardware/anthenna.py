@@ -1,5 +1,3 @@
-from enum import Enum
-
 from hardware import Registers, RAM
 from hardware.common import Hardware
 

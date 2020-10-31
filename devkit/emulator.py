@@ -2,9 +2,8 @@ import argparse
 from functools import wraps
 
 from constants import BIN2REGISTERS
-from decoder import load_bin_file, to_human_readable, to_human_readable_dat, \
-    describe_instruction, DescribeException
-from hardware import Display, Keyboard, RAM, Registers, Sensor, Thruster
+from decoder import load_bin_file, to_human_readable, describe_instruction, DescribeException
+from hardware import Display, Keyboard, RAM, Registers, Sensor, Thruster, Door, DockingClamp, Anthenna
 from instuction import Operator, Instruction
 
 
@@ -58,6 +57,9 @@ class Emulator:
         self.hardware.extend([Thruster(self.regs, self.ram) for _ in range(8)])
         self.hardware.extend([Sensor(self.regs, self.ram)])
         self.hardware.extend([Keyboard(self.regs, self.ram), Display(self.regs, self.ram)])
+        self.hardware.extend([Door(self.regs, self.ram)])
+        self.hardware.extend([DockingClamp(self.regs, self.ram)])
+        self.hardware.extend([Anthenna(self.regs, self.ram)])
 
     def preload(self, filename):
         for pc, code in load_bin_file(filename):

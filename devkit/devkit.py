@@ -192,7 +192,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                     print(f'Bad key: {event.key()}')
                     return super().eventFilter(source, event)
 
-            keyboard: Keyboard = self.emulator.hardware[-2]
+            keyboard: Keyboard = self.emulator.get_hardware_by_name('keyboard')
             keyboard.handle_key_event(key, event.type() == QEvent.KeyPress)
 
         return super().eventFilter(source, event)
@@ -393,7 +393,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             label.setText(str(thruster.power))
 
         # set keyboard buffer UI
-        keyboard: Keyboard = self.emulator.hardware[-2]
+        keyboard: Keyboard = self.emulator.get_hardware_by_name('keyboard')
         self.keyboard_buffer.setText(
             f'{",".join([chr(c) for c in keyboard.buffer])}'[:50])
 
