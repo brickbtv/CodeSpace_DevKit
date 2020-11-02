@@ -85,7 +85,7 @@ class Door(Hardware):
             self.irq_code = self.regs.B
             self.irq_enabled = bool(self.irq_code != 0)
         else:
-            raise Exception(f'[{self.TYPE}] Unexpected interruption code: {code}')
+            print(f'[{self.TYPE}] Unexpected interruption code: {code}')
 
     def change_state(self, door: int, state: States):
         if door > 3:

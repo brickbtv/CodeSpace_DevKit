@@ -38,7 +38,7 @@ class Display(Hardware):
             for i, data in enumerate(LEM1802_PALETTE):
                 self.ram[self.regs.B + i] = data
         else:
-            raise Exception(f'[{self.TYPE}] Unexpected interruption code: {code}')
+            print(f'[{self.TYPE}] Unexpected interruption code: {code}')
 
     @lru_cache
     def load_palette(self, rgbfunc):

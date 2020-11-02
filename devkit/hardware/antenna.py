@@ -86,8 +86,7 @@ class Antenna(Hardware):
         elif code == 5:
             self.recv_buffer = []
         else:
-            raise Exception(
-                f'[{self.TYPE}] Unexpected interruption code: {code}')
+            print(f'[{self.TYPE}] Unexpected interruption code: {code}')
 
     def recv_message(self, data):
         assert isinstance(data, list)

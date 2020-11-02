@@ -12,4 +12,4 @@ class Floppy(Hardware):
         super().__init__(regs, ram)
 
     def handle_interruption(self):
-        raise NotImplemented('Clock device not implemented')
+        print('Floopy device not implemented')

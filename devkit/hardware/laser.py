@@ -12,5 +12,4 @@ class Laser(Hardware):
         super().__init__(regs, ram)
 
     def handle_interruption(self):
-        # raise NotImplemented('Clock device not implemented')
-        pass
+        print('Laser device not implemented')

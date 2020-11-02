@@ -12,5 +12,4 @@ class Clock(Hardware):
         super().__init__(regs, ram)
 
     def handle_interruption(self):
-        # raise NotImplemented('Clock device not implemented')
-        pass
+        print('Clock device not implemented')
