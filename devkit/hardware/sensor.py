@@ -60,9 +60,9 @@ class Sensor(Hardware):
 
     def handle_interruption(self):
         code = self.regs.A
-        if code == 1:
+        if code == 0:
             self.contacts = self.actual_situation
-        elif code == 0:
+        elif code == 1:
             try:
                 contact = self.contacts.pop()
                 self.regs.A = contact['type']
