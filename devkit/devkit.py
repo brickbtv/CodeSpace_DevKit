@@ -204,6 +204,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 key = 0x10
             elif event.key() == Qt.Key_Enter:
                 key = 0x11
+            elif event.key() == Qt.Key_Return:
+                key = 0x11
             elif event.key() == Qt.Key_Insert:
                 key = 0x12
             elif event.key() == Qt.Key_Delete:
