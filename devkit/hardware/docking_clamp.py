@@ -40,7 +40,7 @@ class DockingClamp(Hardware):
             clamp = self.regs.I
             if clamp > 4:
                 return
-            self.regs.B = (self.mode[clamp].value << 8) & self.state[clamp].value
+            self.regs.B = (self.mode[clamp].value << 8) | self.state[clamp].value
         elif code == 1:
             clamp = self.regs.I
             if clamp > 4:
