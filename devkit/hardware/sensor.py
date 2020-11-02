@@ -78,8 +78,8 @@ class Sensor(Hardware):
                 self.regs.X = 0
                 self.regs.Y = 0
                 self.regs.Z = 0
-        else:
-            raise Exception(f'[{self.TYPE}] Unexpected interruption code: {code}')
+        # else:
+        #     raise Exception(f'[{self.TYPE}] Unexpected interruption code: {code}')
 
     def update_sensor(self, data):
         self.actual_situation = data
