@@ -129,6 +129,9 @@ class Emulator:
             if hw.TYPE == name:
                 return hw
 
+    def get_all_hardware_by_name(self, name):
+        return [hw for hw in self.hardware if hw.TYPE == name]
+
     def process_hw_interruptions(self) -> None:
         """ At the moment, here is only one device (Keyboard) can
             be configured to produce hardware interruptions.

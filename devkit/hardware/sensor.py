@@ -5,25 +5,47 @@ from hardware import Registers, RAM
 class Sensor(Hardware):
     """
         Sensor
-        ===============
-        Hardware-ID: ID 0x1F12E306
-        Manufacturer: 0x54482B2B
-        Version: 0x0001
+        ======
 
-        Scans up to 2000m with a 120 degree arc.
+        Hardware-ID    : 0x1f12e306
+        Version        : 0x0002
+        Manufacturer-ID: 0x54482b2b
 
-        Behavior depends on the A register when the HWI is sent.
+        A  | Function
+        ===+===============================================================
+        0  | Scan and put all contacts into contact buffer,
+           | sorted by distance, from close to far.
+        ---+---------------------------------------------------------------
+        1  | Pulls next contact from the buffer. Sets registers as follows:
+           | A: Type sssssssstttttttt (s: subtype, t: type*)
+           | B: Identifier* (hi word)
+           | C: Identifier (lo word)
+           | X: Direction of contact, relative to sensor's orientation
+           | Y: Distance*
+           | Z: Approximate diameter in meters
+           |
+           | Sets A,B,C,X,Y,Z to 0 when no more contacts in the buffer.
+        ---+---------------------------------------------------------------
 
-        0: Returns the first contact from the scan.
-            Sets B to the type of contact,
-            Z the diameter of the contact,
-            Y the range to contact,
-            and X the angle to contact.
+        * Common object types are (among others)
+          0x01: Asteroid
+          0x03: Structure
+          0x08: Buoy
 
-                  0x0000-0x7FFF represent 0-60 degrees to the right,
-            while 0xFFFF-0x8000 represent 0-60 degrees to the left.
-        1: Clears the scanners internal memory then preforms
-            a scan loading loading contacts into the scanners internal memory.
+        * Identifier is an optional identifier specified by the contact,
+          usually through a transponder.
+          Not guaranteed to be unique.
+
+        * Distance is expressed relative to the Sensor's scan range, which
+          is usually declared somewhere on the device.
+          0x0000 means distance of 0 meters
+          0xffff means distance of (max-range) meters
+          This gives short range Sensors a higher resolution than long range
+          (>1000000 meter) Sensors.
+
+        Object size can affect visibility for the Sensor. The Sensor may
+        be unable to detect small objects even inside the Sensor's range
+        unless they are close enough.
     """
 
     ID = 0x1F12E306
@@ -44,8 +66,8 @@ class Sensor(Hardware):
             try:
                 contact = self.contacts.pop()
                 self.regs.A = contact['type']
-                self.regs.B = 1
-                self.regs.C = 2
+                self.regs.B = contact['id'] >> 16
+                self.regs.C = contact['id'] & 0xffff
                 self.regs.X = contact['angle']
                 self.regs.Y = contact['range']
                 self.regs.Z = contact['size']

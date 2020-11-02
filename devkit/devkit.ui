@@ -278,7 +278,7 @@
           </sizepolicy>
          </property>
          <property name="currentIndex">
-          <number>3</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="tab">
           <attribute name="title">
@@ -347,6 +347,11 @@
              </column>
              <column>
               <property name="text">
+               <string>id</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
                <string>size</string>
               </property>
              </column>
@@ -367,15 +372,20 @@
              </item>
              <item row="0" column="1">
               <property name="text">
-               <string>0x000c</string>
+               <string>0x1234abcd</string>
               </property>
              </item>
              <item row="0" column="2">
               <property name="text">
-               <string>0x0100</string>
+               <string>0x000c</string>
               </property>
              </item>
              <item row="0" column="3">
+              <property name="text">
+               <string>0x0100</string>
+              </property>
+             </item>
+             <item row="0" column="4">
               <property name="text">
                <string>0x1fff</string>
               </property>
@@ -387,15 +397,20 @@
              </item>
              <item row="1" column="1">
               <property name="text">
-               <string>0x000c</string>
+               <string>0xef987654</string>
               </property>
              </item>
              <item row="1" column="2">
               <property name="text">
-               <string>0x0123</string>
+               <string>0x000c</string>
               </property>
              </item>
              <item row="1" column="3">
+              <property name="text">
+               <string>0x0123</string>
+              </property>
+             </item>
+             <item row="1" column="4">
               <property name="text">
                <string>0x7abc</string>
               </property>
@@ -471,6 +486,11 @@
              </column>
              <column>
               <property name="text">
+               <string>id</string>
+              </property>
+             </column>
+             <column>
+              <property name="text">
                <string>size</string>
               </property>
              </column>
@@ -491,15 +511,20 @@
              </item>
              <item row="0" column="1">
               <property name="text">
-               <string>0x001b</string>
+               <string>0x9292abab</string>
               </property>
              </item>
              <item row="0" column="2">
               <property name="text">
-               <string>0xbd1c</string>
+               <string>0x001b</string>
               </property>
              </item>
              <item row="0" column="3">
+              <property name="text">
+               <string>0xbd1c</string>
+              </property>
+             </item>
+             <item row="0" column="4">
               <property name="text">
                <string>0xffff</string>
               </property>
@@ -511,15 +536,20 @@
              </item>
              <item row="1" column="1">
               <property name="text">
-               <string>0x0003</string>
+               <string>0x87deff9a</string>
               </property>
              </item>
              <item row="1" column="2">
               <property name="text">
-               <string>0x0fff</string>
+               <string>0x0003</string>
               </property>
              </item>
              <item row="1" column="3">
+              <property name="text">
+               <string>0x0fff</string>
+              </property>
+             </item>
+             <item row="1" column="4">
               <property name="text">
                <string>0xd9c9</string>
               </property>

@@ -3,6 +3,7 @@ import sys
 from enum import Enum
 from functools import partial
 from pathlib import Path
+from typing import List
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import QPoint, QTimer, Qt, QEvent, QCoreApplication
@@ -431,26 +432,35 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             f'{",".join([chr(c) for c in keyboard.buffer])}'[:50])
 
         # update sensors from UI
-        data = []
-        for i in range(7):
-            type_ = self.contacts.item(i, 0)
-            size = self.contacts.item(i, 1)
-            range_ = self.contacts.item(i, 2)
-            angle = self.contacts.item(i, 3)
+
+        sensors: List[Sensor] = self.emulator.get_all_hardware_by_name('sensor')
+
+        for num, contacts in enumerate([self.contacts, self.contacts_2]):
+            data = []
+            for i in range(7):
+                type_ = contacts.item(i, 0)
+                id_ = contacts.item(i, 1)
+                size = contacts.item(i, 2)
+                range_ = contacts.item(i, 3)
+                angle = contacts.item(i, 4)
+
+                try:
+                    data.append({
+                        'type': int(type_.text(), 16),
+                        'id': int(id_.text(), 16),
+                        'size': int(size.text(), 16),
+                        'range': int(range_.text(), 16),
+                        'angle': int(angle.text(), 16),
+                    })
+                except Exception:
+                    continue
 
             try:
-                data.append({
-                    'type': int(type_.text(), 16),
-                    'size': int(size.text(), 16),
-                    'range': int(range_.text(), 16),
-                    'angle': int(angle.text(), 16),
-                })
-            except Exception:
-                continue
-
-        sensor: Sensor = self.emulator.get_hardware_by_name('sensor')
-        if sensor:
-            sensor.update_sensor(data)
+                sensor = sensors[num]
+                if sensor:
+                    sensor.update_sensor(data)
+            except IndexError:
+                pass
 
         doors: Door = self.emulator.get_hardware_by_name('door')
         if doors:
