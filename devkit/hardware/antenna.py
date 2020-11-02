@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from hardware import Registers, RAM
 from hardware.common import Hardware
 
@@ -47,8 +49,8 @@ class Antenna(Hardware):
         # TODO: a variable amount of clams
 
         self.channel = 0
-        self.send_buffer = []
-        self.recv_buffer = []
+        self.send_buffer = defaultdict(list)
+        self.recv_buffer = defaultdict(list)
 
         self.irq_enabled = False
         self.irq_code = None
@@ -67,27 +69,32 @@ class Antenna(Hardware):
         elif code == 3:
             words = min(256, self.regs.I)
 
-            self.send_buffer.append(self.ram[self.regs.B + i] for i in range(words))
+            # self.send_buffer[self.channel].append(self.ram[self.regs.B + i] for i in range(words))
+            self.recv_message([self.ram[self.regs.B + i] for i in range(words)])
         elif code == 4:
-            if not self.recv_buffer:
+            if not self.recv_buffer[self.channel]:
                 self.regs.I = 0
                 self.regs.X = 0
                 self.regs.Y = 0
 
                 return
 
-            msg = self.recv_buffer[0]
+            msg = self.recv_buffer[self.channel].pop()
             self.regs.I = len(msg)
             self.regs.X = 0x0001
             self.regs.Y = 0x0001
 
             for i, word in enumerate(msg):
                 self.ram[self.regs.B + i] = word
+
         elif code == 5:
-            self.recv_buffer = []
+            self.recv_buffer[self.channel] = []
         else:
             print(f'[{self.TYPE}] Unexpected interruption code: {code}')
 
     def recv_message(self, data):
         assert isinstance(data, list)
-        self.recv_buffer.append(data)
+        self.recv_buffer[self.channel].append(data)
+
+        if self.irq_enabled:
+            self.interruptions.append(self.irq_code)
