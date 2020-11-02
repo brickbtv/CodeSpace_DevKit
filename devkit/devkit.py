@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QS
 
 from decoder import gen_instructions, to_human_readable
 from emulator import Emulator
-from hardware import Keyboard, Sensor, Door, DockingClamp, Antenna
+from hardware import Keyboard, Sensor, Door, DockingClamp, Antenna, Clock
 import devkit_ui
 
 from devkit_code_editor import QCodeEditor, PythonHighlighter
@@ -508,6 +508,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 pc, is_brk = next(self.next_instruction)
                 if is_brk or pc == break_at:
                     self.emulator_state = EmulationState.STEP_REQUESTED
+
+                clock: Clock = self.emulator.get_hardware_by_name('clock')
+                clock.update()
 
             except Exception as ex:
                 print(f'Exception: {ex}')

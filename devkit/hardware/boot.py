@@ -6,7 +6,7 @@ class Boot(Hardware):
     ID = 0xEC418001
     VERSION = 0x0001
     VENDOR = 0x54482B2B
-    TYPE = 'clock'
+    TYPE = 'boot'
 
     def __init__(self, regs: Registers, ram: RAM):
         super().__init__(regs, ram)

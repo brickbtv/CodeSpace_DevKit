@@ -140,7 +140,7 @@ class Emulator:
             must be queued.
         """
 
-        for hw in {'keyboard', 'door'}:
+        for hw in {'keyboard', 'door', 'clock', 'antenna', 'docking_clamp'}:
             hardware = self.get_hardware_by_name(hw)
             if not hardware:
                 return

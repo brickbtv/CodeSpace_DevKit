@@ -6,7 +6,7 @@ class Laser(Hardware):
     ID = 0xEA635459
     VERSION = 0x0001
     VENDOR = 0x54482B2B
-    TYPE = 'clock'
+    TYPE = 'laser'
 
     def __init__(self, regs: Registers, ram: RAM):
         super().__init__(regs, ram)
