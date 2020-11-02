@@ -3,7 +3,10 @@ from functools import wraps
 
 from constants import BIN2REGISTERS
 from decoder import load_bin_file, to_human_readable, describe_instruction, DescribeException
-from hardware import Display, Keyboard, RAM, Registers, Sensor, Thruster, Door, DockingClamp, Antenna
+from hardware import (
+    Display, Keyboard, RAM, Registers, Sensor, Thruster, Door,
+    DockingClamp, Antenna, Boot, Clock, Floppy, Laser,
+)
 from instuction import Operator, Instruction
 
 
@@ -55,11 +58,17 @@ class Emulator:
 
         self.hardware = []
         self.hardware.extend([Thruster(self.regs, self.ram) for _ in range(8)])
+        self.hardware.extend([Boot(self.regs, self.ram)])
+        self.hardware.extend([Display(self.regs, self.ram), Keyboard(self.regs, self.ram)])
+        self.hardware.extend([Floppy(self.regs, self.ram)])
         self.hardware.extend([Sensor(self.regs, self.ram)])
-        self.hardware.extend([Keyboard(self.regs, self.ram), Display(self.regs, self.ram)])
-        self.hardware.extend([Door(self.regs, self.ram)])
-        self.hardware.extend([DockingClamp(self.regs, self.ram)])
+        self.hardware.extend([Clock(self.regs, self.ram)])
+        self.hardware.extend([Sensor(self.regs, self.ram)])
         self.hardware.extend([Antenna(self.regs, self.ram)])
+        self.hardware.extend([Antenna(self.regs, self.ram)])
+        self.hardware.extend([DockingClamp(self.regs, self.ram)])
+        self.hardware.extend([Door(self.regs, self.ram)])
+        self.hardware.extend([Laser(self.regs, self.ram)])
 
     def preload(self, filename):
         for pc, code in load_bin_file(filename):
