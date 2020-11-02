@@ -78,9 +78,10 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.send_msg.pressed.connect(self.send_antenna_msg)
 
     def send_antenna_msg(self):
-        antenna: Antenna = self.emulator.get_hardware_by_name('antenna')
-        antenna.recv_buffer.append([ord(c) for c in self.recv_buffer.text()])
-        self.recv_buffer.clear()
+        antennas: List[Antenna] = self.emulator.get_all_hardware_by_name('antenna')
+        for antenna in antennas:
+            antenna.recv_message([ord(c) for c in self.recv_buffer.text()])
+            self.recv_buffer.clear()
 
     def setup_emulator(self):
         if self.filename:
@@ -420,7 +421,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.thruster4,
             self.thruster5,
             self.thruster6,
-            self.thruster7
+            self.thruster7,
         ]
         for i, thruster in enumerate(self.emulator.hardware[:8]):
             label: QLabel = thrusters[i]
