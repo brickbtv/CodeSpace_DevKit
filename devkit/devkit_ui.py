@@ -31,6 +31,14 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.code)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
+        self.horizontalGroupBox = QtWidgets.QGroupBox(self.centralwidget)
+        self.horizontalGroupBox.setObjectName("horizontalGroupBox")
+        self.horizontalLayout_9 = QtWidgets.QHBoxLayout(self.horizontalGroupBox)
+        self.horizontalLayout_9.setObjectName("horizontalLayout_9")
+        self.stop_at = QtWidgets.QLineEdit(self.horizontalGroupBox)
+        self.stop_at.setObjectName("stop_at")
+        self.horizontalLayout_9.addWidget(self.stop_at)
+        self.verticalLayout.addWidget(self.horizontalGroupBox)
         self.speed = QtWidgets.QComboBox(self.centralwidget)
         self.speed.setObjectName("speed")
         self.speed.addItem("")
@@ -425,6 +433,7 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "CodeSpace DevKit 1.0"))
+        self.horizontalGroupBox.setTitle(_translate("MainWindow", "Stop At"))
         self.speed.setItemText(0, _translate("MainWindow", "1 kHz"))
         self.speed.setItemText(1, _translate("MainWindow", "10 kHz"))
         self.speed.setItemText(2, _translate("MainWindow", "100 kHz"))

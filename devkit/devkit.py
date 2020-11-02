@@ -476,6 +476,15 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         if self.next_instruction is None:
             return
 
+        break_at = self.stop_at.text()
+        try:
+            if len(break_at) == 6:
+                break_at = int(break_at, 16)
+            else:
+                break_at = None
+        except:
+            break_at = None
+
         for i in range(self.speed_multiplier):
             # give some air to display thread
             if i % 100 == 0:
@@ -486,7 +495,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                     break
 
                 pc, is_brk = next(self.next_instruction)
-                if is_brk:
+                if is_brk or pc == break_at:
                     self.emulator_state = EmulationState.STEP_REQUESTED
 
             except Exception as ex:

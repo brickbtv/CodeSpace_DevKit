@@ -40,6 +40,18 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
+       <widget class="QGroupBox" name="horizontalGroupBox">
+        <property name="title">
+         <string>Stop At</string>
+        </property>
+        <layout class="QHBoxLayout" name="horizontalLayout_9">
+         <item>
+          <widget class="QLineEdit" name="stop_at"/>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
        <widget class="QComboBox" name="speed">
         <property name="currentIndex">
          <number>3</number>
