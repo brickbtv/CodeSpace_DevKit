@@ -1,0 +1,722 @@
+; Hardware probe tool v1.0
+
+:start
+	; find keyboard and display
+	JSR detect_base_hw
+	JSR setup_display
+
+	; setup colors
+	SET [fg_color], 0x7000
+	SET [bg_color], 0x0800
+
+	; header
+	SET X, 0
+	SET Y, 0
+	SET A, welcome_string
+	JSR write_text_at_xy
+
+	; footer
+	SET Y, 11
+	SET A, footer_menu
+	JSR write_text_at_xy
+
+	; reset colors
+	SET [bg_color], 0x0000
+	SET PC, main_loop
+
+:welcome_string
+	DAT "-=-  Hardware probe utility  -=-", 0x0
+:footer_menu
+	DAT " Z/X device | P probe | W/S regs", 0x0
+
+:main_loop
+	; generic info
+	JSR show_devices_selector
+	JSR show_current_device_info
+	JSR show_probe_regs_values
+
+:input
+	; handle input
+	JSR fly
+	JSR get_key
+	IFE C, 0x0
+		SET PC, input
+
+	; select device by A/D keys
+	IFE C, [key_z]
+		IFG [selected_device], 1
+			SUB [selected_device], 1
+
+	IFE C, [key_x]
+		IFL [selected_device], [hw_devices_amount]
+			ADD [selected_device], 1
+
+	; select probe register to change
+	IFE C, [key_w]
+		IFG [selected_register], 0
+			SUB [selected_register], 1
+
+	IFE C, [key_s]
+		IFL [selected_register], 7
+			ADD [selected_register], 1
+
+	; probe hardware with probe register values
+	IFE C, [key_p]
+		JSR probe
+
+	; change probe register value
+	;  values 0-9
+	IFG C, 0x29
+		IFL C, 0x40
+			JSR set_register_digit_09
+
+	;  values a-f
+	IFG C, 0x60
+		IFL C, 0x67
+			JSR set_register_digit_az
+
+	SET PC, main_loop
+
+; UI buttons
+:key_z
+	DAT 'z'
+:key_x
+	DAT 'x'
+:key_p
+	DAT 'p'
+:key_w
+	DAT 'w'
+:key_s
+	DAT 's'
+
+
+; ----- Everything about ship control ---------
+:control_keys
+	DAT 'u'
+	DAT 'o'
+	DAT 'j'
+	DAT 'k'
+	DAT 'l'
+	DAT 'i'
+:key_stop
+	DAT 0x0000
+
+:thrusters
+	DAT 0x0005, 0x0006 	; u
+	DAT 0x0004, 0x0007 	; o
+	DAT 0x0006, 0x0007 	; j
+	DAT 0x0002, 0x0003 	; k
+	DAT 0x0004, 0x0005 	; l
+	DAT 0x0000, 0x0001 	; i
+
+:thrusters_state
+	DAT 0x0000, 0x0000
+	DAT 0x0000, 0x0000
+	DAT 0x0000, 0x0000
+	DAT 0x0000, 0x0000
+
+; fly controls routine
+;	1 - clear thrusters state
+;	2 - get pressed buttons, set state
+;	3 - use state to set thrusters power
+
+:fly
+	SET I, control_keys
+	SET J, thrusters_state
+	SET Z, thrusters
+
+	SET X, 0
+
+:clear_thrusters_state
+	SET [J], 0x0000
+	ADD J, 1
+
+	ADD X, 1
+	IFL X, 8
+		SET PC, clear_thrusters_state
+
+	SET J, thrusters	; set back to first thruster
+
+:set_thrusters_state_loop
+	SET A, 2		; check if button pressed
+	SET B, [I]	; current button
+	HWI [hw_keyboard]
+
+	SET J, thrusters_state	; reset pointer
+	ADD J, [Z]	; move state pointer to first thruster
+	IFE C, 1
+		SET [J], 0x00ff
+
+	SET J, thrusters_state	; reset pointer
+	ADD Z, 1
+
+	ADD J, [Z]	; move state pointer to second thruster
+	IFE C, 1
+		SET [J], 0x00ff
+
+	ADD Z, 1
+
+	ADD I, 1 ; next key
+	IFN I, key_stop
+		SET PC, set_thrusters_state_loop
+
+:fire_engines
+	SET J, thrusters_state
+	SET I, 0
+
+:fire_engines_loop
+	ADD J, I	; select thruster
+	SET A, 0	; set power mode
+	SET X, [J]
+	SET B, [J]	; power value from state (0 or 255)
+	SET Y, I
+	HWI I	; run on [I] device
+
+	SET J, thrusters_state
+	ADD I, 1
+	IFL I, 8
+		SET PC, fire_engines_loop
+
+	SET PC, POP
+
+; ----- Everything about hardware probes ------
+
+; show number of devices
+:show_devices_selector
+	SET X, 0
+	SET Y, 1
+	SET A, selected_string
+	JSR write_text_at_xy
+
+	; write selected device num
+	SET A, [selected_device]
+	JSR write_number
+
+	; write slash
+	SET A, slash
+	JSR write_text
+
+	; write devices amount
+	SET A, [hw_devices_amount]
+	JSR write_number
+
+	; clear screen after digits
+	SET A, empty
+	JSR write_text
+
+	SET PC, POP
+
+:slash
+	DAT '/', 0x0
+:empty
+	DAT '  ', 0x0
+:selected_string
+	DAT 'selected: ', 0x0
+
+; extract device info and show
+:show_current_device_info
+	; show selected device info
+	;  query info
+	SET A, [selected_device]
+	SUB A, 1	; UI from 1, code from 0
+	HWQ A
+	SET PUSH, X
+	SET PUSH, Y
+	SET PUSH, C
+	SET PUSH, A
+	SET PUSH, B
+
+
+	;  show hardware id
+	SET X, 0
+	SET Y, 3
+	SET A, hw_id_string
+	JSR write_text_at_xy
+
+	SET A, POP
+	JSR write_hex_number
+	SET A, POP
+	JSR write_hex_number
+
+	;  show hardware version
+	SET X, 0
+	SET Y, 4
+	SET A, hw_version_string
+	JSR write_text_at_xy
+
+	SET A, POP
+	JSR write_hex_number
+
+	;  show hardware vendor
+	SET X, 0
+	SET Y, 5
+	SET A, hw_vendor_string
+	JSR write_text_at_xy
+
+	SET A, POP
+	JSR write_hex_number
+	SET A, POP
+	JSR write_hex_number
+
+	JSR determine_device
+
+	SET PC, POP
+
+:hw_id_string
+	DAT 'ID:0x', 0x0
+:hw_version_string
+	DAT 'Version:0x', 0x0
+:hw_vendor_string
+	DAT 'Vendor:0x', 0x0
+
+; show readable device name
+:determine_device
+	SET A, [selected_device]
+	SUB A, 1	; UI from 1, code from 0
+	HWQ A
+
+	SET I, device_name_unknown
+
+	IFE A, 0x8683
+		IFE B, 0xA474
+			SET I, device_name_thruster
+	IFE A, 0x8001
+		IFE B, 0xEC41
+			SET I, device_name_boot_device
+	IFE A, 0xF615
+		IFE B, 0x7349
+			SET I, device_name_monitor
+	IFE A, 0x7406
+		IFE B, 0x30CF
+			SET I, device_name_keyboard
+	IFE A, 0x24C5
+		IFE B, 0x4FD5
+			SET I, device_name_floppy
+	IFE A, 0xE306
+		IFE B, 0x1F12
+			SET I, device_name_sensor
+	IFE A, 0xC5A3
+		IFE B, 0x74CF
+			SET I, device_name_anthenna
+	IFE A, 0xA3DF
+		IFE B, 0x7877
+			SET I, device_name_docking_clamps
+	IFE A, 0x90C7
+		IFE B, 0x3878
+			SET I, device_name_doors
+	IFE A, 0x5459
+		IFE B, 0xEA63
+			SET I, device_name_laser
+
+	SET X, 0
+	SET Y, 7
+	SET A, I
+
+	SET PUSH, [fg_color]
+	SET [fg_color], 0xf000
+
+	JSR write_text_at_xy
+
+	SET [fg_color], POP
+
+	SET PC, POP
+
+:device_name_unknown
+	DAT "Unknown        ", 0x0
+:device_name_thruster
+	DAT "Thruster       ", 0x0
+:device_name_boot_device
+	DAT "Boot device    ", 0x0
+:device_name_monitor
+	DAT "Monitor        ", 0x0
+:device_name_keyboard
+	DAT "Keyboard       ", 0x0
+:device_name_floppy
+	DAT "Floppy drive   ", 0x0
+:device_name_sensor
+	DAT "Sensor         ", 0x0
+:device_name_anthenna
+	DAT "Anthenna       ", 0x0
+:device_name_docking_clamps
+	DAT "Docking clamps ", 0x0
+:device_name_doors
+	DAT "Doors          ", 0x0
+:device_name_laser
+	DAT "Laser          ", 0x0
+
+; show probe regs (left column)
+:show_probe_regs_values
+	SET PUSH, [fg_color]
+	SET [fg_color], 0xf000
+
+	SET X, 20
+	SET Y, 3
+	SET I, 0	; store register (0 - A, 1 - B, ...)
+	:probe_regs_loop
+		SET PUSH, [bg_color]
+
+		IFE I, [selected_register]
+			SET [bg_color], 0x0100
+
+		; print register name
+		SET A, [I + regs_names_chars]
+		JSR write_char_at_xy
+		; add space
+		ADD J, 1
+		; print probe register value
+		SET A, [I + probe_registers]
+		JSR write_hex_number
+
+		ADD I, 1	; next register
+		ADD Y, 1	; next line
+
+		SET [bg_color], POP
+
+		IFL I, 8
+			SET PC, probe_regs_loop
+
+	SET [fg_color], POP
+	SET PC, POP
+
+:regs_names_chars
+	DAT 'ABCXYZIJ'
+
+; dummy method to copy probe registers to CPU registers
+:run_probe
+	SET J, probe_registers
+	SET A, [J]
+	ADD J, 1
+	SET B, [J]
+	ADD J, 1
+	SET C, [J]
+	ADD J, 1
+	SET X, [J]
+	ADD J, 1
+	SET Y, [J]
+	ADD J, 1
+	SET Z, [J]
+	ADD J, 1
+	SET I, [J]
+	ADD J, 1
+	SET J, [J]
+
+	SUB [selected_device], 1	; UI count devices from 1, CPU from 0
+	HWI [selected_device]
+	ADD [selected_device], 1
+
+	SET PC, POP
+
+; dump registers and write them one by one
+:show_probe_results
+	SET PUSH, J
+	SET PUSH, I
+	SET PUSH, Z
+	SET PUSH, Y
+	SET PUSH, X
+	SET PUSH, C
+	SET PUSH, B
+	SET PUSH, A
+
+	SET X, 27
+	SET Y, 3
+	SET I, 0
+	:probe_res_loop
+		SET A, POP
+		JSR write_hex_number_at_xy
+
+		ADD Y, 1	; next line
+		ADD I, 1	; next register
+		IFL I, 8
+			SET PC, probe_res_loop
+
+	SET PC, POP
+
+; run probe, show result
+:probe
+	JSR run_probe
+
+	SET PUSH, [fg_color]
+	SET [fg_color], 0xf000
+
+	JSR show_probe_results
+
+	SET [fg_color], POP
+	SET PC, POP
+
+:set_register_digit_09
+	SET PUSH, B
+
+	SET A, C
+	SUB A, 0x30
+	SET B, probe_registers
+	ADD B, [selected_register]
+	SHL [B], 4
+	ADD [B], A
+
+	SET B, POP
+	SET PC, POP
+
+:set_register_digit_az
+	SET PUSH, B
+
+	SET A, C
+	SUB A, 0x57
+	SET B, probe_registers
+	ADD B, [selected_register]
+	SHL [B], 4
+	ADD [B], A
+
+	SET B, POP
+	SET PC, POP
+
+:probe_registers
+	DAT 0x0000	; A
+	DAT 0x0000	; B
+	DAT 0x0000	; C
+	DAT 0x0000	; X
+	DAT 0x0000	; Y
+	DAT 0x0000	; Z
+	DAT 0x0000	; I
+	DAT 0x0000	; J
+
+:selected_device
+	DAT 0x0001
+:selected_register
+	DAT 0x0000
+:selected_digit
+	DAT 0x0000
+
+; --------- HW detection ---------
+
+:hw_devices_amount
+	DAT 0x0
+:hw_keyboard
+	DAT 0xffff
+:hw_display
+	DAT 0xffff
+
+; detect hardware needed by tool itself
+:detect_base_hw
+	SET I, 0
+	SET A, 0
+	HWN J ; get number of devices
+	SET [hw_devices_amount], J
+
+:detect_base_hw_loop
+	HWQ I ; get device info
+	; is keyboard?
+	IFE B, 0x30cf
+	IFE A, 0x7406
+		SET [hw_keyboard], I
+	; is display?
+	IFE B, 0x7349
+	IFE A, 0xf615
+		SET [hw_display], I
+	ADD I, 1	; next device
+	IFN I, J	; are all devices listed?
+		SET PC, detect_base_hw_loop
+
+	SET PC, POP
+
+; ------- Display things ---------
+; Screen write functions work in following way:
+; 	- `func_at_xy` writes data to (X, Y)
+;	and stores cursor to J register
+;	- `func` uses stored J as cursor
+; So main pattern to write line is:
+;	`func_at_xy` -> `func` -> `func`
+;    and if cursor must me changed -> `func_at_xy`
+
+
+:screen_mmap
+	DAT 0x8000
+:fg_color
+	DAT 0xf000
+:bg_color
+	DAT 0x0000
+
+:setup_display
+	SET PUSH, A
+	SET PUSH, B
+
+	SET A, 0
+	SET B, [screen_mmap]
+	HWI [hw_display]	; map screen to unused space
+
+	SET B, POP
+	SET A, POP
+	SET PC, POP
+
+; Calc first character position
+;  and store it to J
+:set_cursor
+	SET J, Y
+	MUL J, 32
+	ADD J, X
+	ADD J, [screen_mmap]
+
+	SET PC, POP
+
+;===============================================
+; Write null-terminated string
+;  from address A to coords (X, Y)
+:write_text_at_xy
+	SET PUSH, A
+	SET PUSH, B
+
+	JSR set_cursor
+	SET PC, write_text_loop
+
+; Write null-terminated string
+;  from address A to cursor J
+:write_text
+	SET PUSH, A
+	SET PUSH, B
+
+:write_text_loop
+	SET B, [A]
+	BOR B, [fg_color]
+	BOR B, [bg_color]
+	SET [J], B
+	ADD A, 1
+	ADD J, 1
+	IFN [A], 0
+		SET PC, write_text_loop
+
+	SET B, POP
+	SET A, POP
+	SET PC, POP
+
+;===============================================
+; Write char A at position (X, Y)
+:write_char_at_xy
+	JSR set_cursor
+
+:write_char
+	SET PUSH, A
+
+	BOR A, [fg_color]
+	BOR A, [bg_color]
+	SET [J], A
+	ADD J, 1
+
+	SET A, POP
+	SET PC, POP
+;===============================================
+; Returns in I amount of digits
+;  of result decimal
+:get_decimal_digits
+	SET I, 0
+	SET B, A
+
+:get_decimal_digits_loop
+	DIV B, 10
+	ADD I, 1
+	IFN B, 0x0
+		SET PC, get_decimal_digits_loop
+
+	SET PC, POP
+
+; Write decimal number
+;  from address A to coords (X, Y)
+:write_number_at_xy
+	SET PUSH, Z
+	JSR get_decimal_digits
+	JSR set_cursor
+
+	SET Z, A
+
+	ADD J, I	; set cursor to right position
+	SET PUSH, J ; numbers prints right-to-left, so store last position
+	SUB J, 1
+	SET PC, write_number_loop
+
+; Write decimal number
+;  from address A to cursor J
+:write_number
+	SET PUSH, Z
+	JSR get_decimal_digits
+
+	ADD J, I
+	SET PUSH, J ; numbers prints right-to-left, so store last position
+
+	SUB J, 1
+	SET Z, A
+
+:write_number_loop
+	SET B, Z
+	MOD B, 0xA
+	ADD B, 0x30	; add '0' letter index
+	BOR B, [fg_color]
+	BOR B, [bg_color]
+	SET [J], B
+
+	SUB J, 1
+	DIV Z, 0xA
+	IFN Z, 0x0
+		SET PC, write_number_loop
+
+	SET J, POP	; resore cursor pointer to last digit
+	SET Z, POP
+	SET PC, POP
+
+;===============================================
+; Write hex number from A
+;  to coords (X, Y)
+;  always showns without '0x' prefix
+:write_hex_number_at_xy
+	JSR set_cursor
+	SET PUSH, A
+	SET PUSH, B
+	SET PUSH, I
+
+	ADD J, 3	; set cursor to right position
+	SET PUSH, J ; numbers prints right-to-left, so store last position
+	SET I, 4
+	SET PC, write_hex_number_loop
+
+:write_hex_number
+	SET PUSH, A
+	SET PUSH, B
+	SET PUSH, I
+	ADD J, 3	; set cursor to right position
+	SET PUSH, J ; numbers prints right-to-left, so store last position
+	SET I, 4
+
+:write_hex_number_loop
+	SET B, A
+	AND B, 0xF
+	IFG B, 0x9
+		ADD B, 0x57	; add 'a' - 10 letter index
+	IFL B, 0xA
+		ADD B, 0x30	; add '0' letter index
+
+	BOR B, [fg_color]
+	BOR B, [bg_color]
+	SET [J], B
+
+	SUB J, 1
+	SUB I, 1
+	SHR A, 4
+	IFN I, 0
+		SET PC, write_hex_number_loop
+
+	SET J, POP	; resore cursor pointer to last digit
+	ADD J, 1
+	SET I, POP
+	SET B, POP
+	SET A, POP
+	SET PC, POP
+
+;===============================================
+
+; ------- Input handling ---------
+
+; Stores last pressed key to C
+:get_key
+	SET A, 1
+	HWI [hw_keyboard]
+	SET PC, POP
+
+;
+;
