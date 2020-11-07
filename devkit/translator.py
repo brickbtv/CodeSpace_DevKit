@@ -16,6 +16,7 @@ class OperandType(Enum):
     LABEL_POINTER = 8
     STRING = 9
     BINARY = 10
+    MEM_ADDRESS = 11
 
     @staticmethod
     def determine(operand: str, labels: dict):
@@ -41,6 +42,8 @@ class OperandType(Enum):
             if operand in labels:
                 return OperandType.LABEL_POINTER
 
+            return OperandType.MEM_ADDRESS
+
         elif operand.startswith(('"', "'")) and operand.endswith(('"', "'")):
             return OperandType.STRING
 
@@ -56,10 +59,13 @@ class DCPUTranslator:
         line = line.strip()
         command, args = line[:self.OPCODE_LEN], line[self.OPCODE_LEN:]
 
-        params = args.split(',')[:2]
+        params = args.split(',')
 
         param_1 = params[0].strip() if len(params) >= 1 else None
         param_2 = params[1].strip() if len(params) == 2 else None
+
+        if len(params) > 2:
+            param_1 = [p.strip() for p in params]
 
         return command.strip().upper(), param_1, param_2
 
@@ -74,6 +80,14 @@ class DCPUTranslator:
                         labels[line[1:other_instr]] = 0
                     else:
                         labels[line[1:]] = 0
+
+                if line.startswith('.include '):
+                    if ';' in line:
+                        line = line[0:line.find(';')]
+
+                    include_file = line[len('.include '):].strip()
+                    include_file = include_file[1:-1]
+                    labels.update(self.extract_labels(include_file))
 
             return labels
 
@@ -99,6 +113,8 @@ class DCPUTranslator:
             return 0x1f, labels.get(operand)
         elif operand_type is OperandType.LABEL_POINTER:
             return 0x1e, labels.get(operand[1:-1])
+        elif operand_type is OperandType.MEM_ADDRESS:
+            return 0x1e, int(operand[1:-1], 16)
 
         raise Exception
 
@@ -110,8 +126,17 @@ class DCPUTranslator:
                 pos = line.find(';')
                 if pos >= 0:
                     line = line[:pos]
+                    line = line.strip()
 
                 if not line or line.startswith(';'):
+                    continue
+
+                if line.startswith('.include '):
+                    include_file = line[len('.include '):].strip()
+                    include_file = include_file[1:-1]
+                    for _, __, cmd, param1, param2 in self.gen_lines(include_file):
+                        yield line_num, line, cmd, param1, param2
+
                     continue
 
                 if line.startswith(':'):
@@ -151,7 +176,12 @@ class DCPUTranslator:
 
                 if cmd == 'DAT':
                     instructions = []
-                    for param in [param1, param2]:
+
+                    params = [param1, param2]
+                    if isinstance(param1, list):
+                        params = param1
+
+                    for param in params:
                         data_type = OperandType.determine(param, labels={})
 
                         if data_type is OperandType.DECIMAL:

@@ -145,7 +145,7 @@ class Emulator:
             if not hardware:
                 return
 
-            if hardware.interruptions and self.on_interruption_now is False:
+            if hardware.interruptions and self.on_interruption_now is False and self.regs.IA > 0:
                 self.stack_push(self.regs.PC)
                 self.stack_push(self.regs.A)
 
