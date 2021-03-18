@@ -138,7 +138,7 @@ STYLES = {
 }
 
 
-class PythonHighlighter(QSyntaxHighlighter):
+class DCPUHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for the DCPU language.
     """
     keywords = [
@@ -161,11 +161,11 @@ class PythonHighlighter(QSyntaxHighlighter):
 
         # Keyword, operator, and brace rules
         rules += [(r'\b%s\b' % w, 0, STYLES['keyword'])
-            for w in PythonHighlighter.keywords]
+                  for w in DCPUHighlighter.keywords]
         rules += [(r'%s' % o, 0, STYLES['operator'])
-            for o in PythonHighlighter.operators]
+                  for o in DCPUHighlighter.operators]
         rules += [(r'%s' % b, 0, STYLES['brace'])
-            for b in PythonHighlighter.braces]
+                  for b in DCPUHighlighter.braces]
 
         # All other rules
         rules += [

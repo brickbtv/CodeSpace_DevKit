@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 from enum import Enum
 from functools import partial
@@ -6,16 +7,16 @@ from pathlib import Path
 from typing import List
 
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import QPoint, QTimer, Qt, QEvent, QCoreApplication
-from PyQt5.QtGui import QTextCursor, QImage, QPixmap, qRgb, QKeySequence
-from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QShortcut
+from PyQt5.QtCore import QTimer, Qt, QEvent, QCoreApplication, QMutex
+from PyQt5.QtGui import QImage, QPixmap, qRgb
+from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QDesktopWidget
 
-from decoder import gen_instructions, to_human_readable
+from editor_window import EditorWindow
 from emulator import Emulator
 from hardware import Keyboard, Sensor, Door, DockingClamp, Antenna, Clock
 import devkit_ui
 
-from devkit_code_editor import QCodeEditor, PythonHighlighter
+from project.project import Project
 from translator import DCPUTranslator
 
 
@@ -28,7 +29,6 @@ class EmulationState(Enum):
 
 
 class DevKitMode(Enum):
-    BIN = 0
     ASM = 1
 
 
@@ -39,19 +39,27 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     emulator_state = EmulationState.INITIAL
     timers = []
     mode = None
+    close_mutex = QMutex()
 
-    def __init__(self, filename):
+    def __init__(self, project_file):
         super().__init__()
 
         self.next_instruction = None
-        self.filename = filename
-
-        if self.filename and self.filename.endswith('.bin'):
-            self.mode = DevKitMode.BIN
-        else:
-            self.mode = DevKitMode.ASM
+        self.project_file = project_file
+        self.editor_windows = {}
 
         self.setupUi(self)
+        self.move_window_to_center()
+
+        # project tree
+        self.project_view_model = QtGui.QStandardItemModel()
+        self.project_view_model.setHorizontalHeaderLabels(['Name'])
+        self.project_view.setModel(self.project_view_model)
+        self.project_view.doubleClicked.connect(self.select_file_to_edit)
+
+        if project_file:
+            self.project = Project.load_from_file(project_file)
+            self.setup_project_tree()
 
         self.setup_display()
         self.setup_emulator()
@@ -71,6 +79,40 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.speed_changed()
         self.speed.currentIndexChanged.connect(self.speed_changed)
 
+    def select_file_to_edit(self, index):
+        item = self.project_view.selectedIndexes()[0]
+
+        filename = item.model().itemFromIndex(index).text()
+
+        if filename in self.editor_windows:
+            self.editor_windows[filename].activateWindow()
+            return
+
+        editor_window = EditorWindow(self.project.location, filename, self.remove_editor_window)
+        editor_window.show()
+
+        self.editor_windows[filename] = editor_window
+
+    def remove_editor_window(self, filename):
+        if self.close_mutex.tryLock() is False:
+            return
+
+        if filename in self.editor_windows:
+            self.editor_windows.pop(filename)
+
+        self.close_mutex.unlock()
+
+    def move_window_to_center(self):
+        center_point = QDesktopWidget().availableGeometry().center()
+        rect = self.frameGeometry()
+        rect.moveCenter(center_point)
+        self.move(rect.topLeft())
+
+    def setup_project_tree(self):
+        self.project_view_model.setRowCount(0)
+        for filename in self.project.files:
+            self.project_view_model.appendRow(QtGui.QStandardItem(filename))
+
     def setup_keyboard(self):
         self.keyboard.installEventFilter(self)
 
@@ -84,7 +126,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.recv_buffer.clear()
 
     def setup_emulator(self):
-        if self.filename:
+        if self.project_file:
             self.action_reset()
 
         emu_timer = QTimer(self)
@@ -140,59 +182,36 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def action_open_file(self):
         home_dir = str(Path.home())
-        filename = QFileDialog.getOpenFileName(self, 'Open file', home_dir, 'DCPU files (*.bin *.dasm)')
+        filename = QFileDialog.getOpenFileName(
+            self, 'Open file', home_dir, 'project files (*.codespace)', options=QFileDialog.DontUseNativeDialog,
+        )
+
         if filename and filename[0]:
-            self.filename = filename[0]
-            if self.filename.endswith(('.bin', '.rom')):
-                self.mode = DevKitMode.BIN
-            else:
-                self.mode = DevKitMode.ASM
-
-            self.code.clear()
-            if self.mode == DevKitMode.ASM:
-                with open(self.filename) as f:
-                    for line in f.readlines():
-                        self.code.appendPlainText(line.rstrip())
-
+            self.project = Project.load_from_file(filename[0])
+            self.setup_project_tree()
             self.action_reset()
 
     def action_step(self):
-        if self.code.isEnabled() and self.mode is DevKitMode.ASM:
-            self.retranslate()
-            self.code.setEnabled(False)
+        self.retranslate()
 
         self.emulator_state = EmulationState.STEP_REQUESTED
         self.actionReset.setEnabled(True)
 
     def action_run(self):
-        if self.code.isEnabled() and self.mode is DevKitMode.ASM:
-            self.retranslate()
-            self.code.setEnabled(False)
+        self.retranslate()
 
         self.emulator_state = EmulationState.RUN_FAST
         self.actionReset.setEnabled(True)
 
     def action_reset(self):
         self.last_frame = []
-        if self.filename is None:
+        if self.project_file is None:
             return
 
         self.emulator = Emulator(debug=False)
-
-        if self.emulator_state in (EmulationState.INITIAL, EmulationState.LOADED) or self.mode is DevKitMode.BIN:
-            filename = self.filename
-        else:
-            filename = '_tmp.asm'
-
-        self.load_file(filename)
-        self.setup_code_editor(filename)
+        self.load_project_files()
 
         self.emulator_state = EmulationState.LOADED
-
-        self.code.setEnabled(self.mode is DevKitMode.ASM)
-
-        if self.mode is DevKitMode.BIN:
-            self.emulator.preload(self.filename)
 
         self.next_instruction = self.emulator.run_step()
         self.actionReset.setEnabled(False)
@@ -234,56 +253,12 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         return super().eventFilter(source, event)
 
-    def setup_code_editor(self, filename):
-        """ Replaces basic text editor widget by custom code editor widget """
-        if isinstance(self.code, QCodeEditor) and self.mode is DevKitMode.ASM:
-            return
-
-        better_code = QCodeEditor(self.centralwidget, self.pc_to_line, self.mode is DevKitMode.ASM)
-
-        font = QtGui.QFont()
-        font.setFamily(self.code.font().family())
-        font.setPointSize(self.code.font().pointSize())
-
-        better_code.setFont(font)
-        better_code.setObjectName("code")
-        better_code.setLineWrapMode(better_code.NoWrap)
-        better_code.setTabStopWidth(30)
-
-        self.horizontalLayout.replaceWidget(self.code, better_code)
-
-        self.code.deleteLater()
-        self.code = None
-
-        if self.mode is DevKitMode.BIN:
-            for line in self.lines:
-                better_code.appendPlainText(line)
-            better_code.setEnabled(False)
-        else:
-            with open(filename) as f:
-                for line in f.readlines():
-                    better_code.appendPlainText(line.rstrip())
-
-            better_code.setEnabled(True)
-
-        cursor = better_code.cursorForPosition(QPoint(0, 0))
-        better_code.setTextCursor(cursor)
-
-        self.hl = PythonHighlighter(better_code.document())
-
-        shortcut = QShortcut(QKeySequence("Ctrl+S"), better_code)
-        shortcut.activated.connect(self.save_file)
-
-        self.code = better_code
-
     def closeEvent(self, event):
-        self.save_file()
+        self.close_mutex.lock()
+        for editor in self.editor_windows.values():
+            editor.close()
 
-    def save_file(self):
-        if self.mode is DevKitMode.ASM:
-            data = self.code.toPlainText()
-            with open(self.filename, 'w') as f:
-                f.write(data)
+        self.close_mutex.unlock()
 
     def retranslate(self):
         try:
@@ -292,52 +267,45 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             QMessageBox.warning(self, 'Translation Error', str(ex))
 
     def _retranslate(self):
-        data = self.code.toPlainText()
-        with open('_tmp.asm', 'w') as f:
-            f.write(data)
+
+        # save all changes
+        for editor in self.editor_windows.values():
+            editor.save_file()
+
+
 
         self.pc_to_line = {}
 
         tr = DCPUTranslator()
-        with open('_tmp.bin', 'wb') as f:
+        bin_location = os.path.join(self.project.location, f'{self.project.name}.bin')
+        with open(bin_location, 'wb') as f:
             pc = 0
-            for line_num, _, instructions in tr.asm2bin('_tmp.asm'):
+            for line_num, _, instructions in tr.asm2bin(self.project.location, self.project.main_file):
                 for code in instructions:
                     f.write(code.to_bytes(2, byteorder='little'))
                     # TODO: refactor this
                 self.pc_to_line[pc] = line_num
                 pc += len(instructions)
 
-        # self.load_file('_tmp.bin')
-        self.emulator.preload('_tmp.bin')
+        self.emulator.preload(bin_location)
 
-        # all steps successful, so, we can save original file
-        with open(self.filename, 'w') as f:
-            f.write(data)
-
-    def load_file(self, filename):
+    def load_project_files(self):
         """ Reads .bin file, decodes instructions
             saves PC-to-instruction info.
         """
         self.pc_to_line = {}
         self.lines = []
 
-        if filename.endswith(('.bin', '.rom')):
-            for line_num, (pc, instruction) in enumerate(gen_instructions(filename)):
-                line = to_human_readable(instruction, pc, extended=False)
-                self.lines.append(line)
+        # translate and then load
+        translator = DCPUTranslator()
+        try:
+            pc = 0
+            for line_num, line, instructions in translator.asm2bin(self.project.location, self.project.main_file):
                 self.pc_to_line[pc] = line_num
-        else:
-            # translate and then load
-            translator = DCPUTranslator()
-            try:
-                pc = 0
-                for line_num, line, instructions in translator.asm2bin(filename):
-                    self.pc_to_line[pc] = line_num
-                    pc += len(instructions)
+                pc += len(instructions)
 
-            except Exception as ex:
-                print(ex)
+        except Exception as ex:
+            print(ex)
 
     # hack for save some cycles while drawing
     last_frame = []
@@ -529,8 +497,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 except:
                     break
 
-                cursor = QTextCursor(self.code.document().findBlockByLineNumber(selectline))
-                self.code.setTextCursor(cursor)
+                if self.project.main_file in self.editor_windows:
+                    self.editor_windows[self.project.main_file].select_line(selectline)
+
                 QCoreApplication.processEvents()
                 break
 
@@ -544,10 +513,10 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filename')
+    parser.add_argument('--project-file')
     args = parser.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
-    window = DevKitApp(args.filename)
+    window = DevKitApp(args.project_file)
     window.show()
     app.exec_()

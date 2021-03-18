@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1351</width>
-    <height>914</height>
+    <width>1075</width>
+    <height>887</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,24 +16,21 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="QPlainTextEdit" name="code">
-      <property name="enabled">
-       <bool>true</bool>
+     <widget class="QTreeView" name="project_view">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
       </property>
-      <property name="maximumSize">
-       <size>
-        <width>1677000</width>
-        <height>16777215</height>
-       </size>
+      <property name="editTriggers">
+       <set>QAbstractItemView::NoEditTriggers</set>
       </property>
-      <property name="font">
-       <font>
-        <family>DejaVu Sans Mono</family>
-        <pointsize>8</pointsize>
-       </font>
+      <property name="showDropIndicator" stdset="0">
+       <bool>false</bool>
       </property>
-      <property name="lineWrapMode">
-       <enum>QPlainTextEdit::NoWrap</enum>
+      <property name="alternatingRowColors">
+       <bool>false</bool>
       </property>
      </widget>
     </item>
@@ -1017,7 +1014,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1351</width>
+     <width>1075</width>
      <height>22</height>
     </rect>
    </property>

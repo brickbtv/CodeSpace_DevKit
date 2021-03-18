@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'devkit.ui'
+# Form implementation generated from reading ui file 'devkit/devkit.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.1
 #
@@ -14,21 +14,22 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1351, 914)
+        MainWindow.resize(1075, 887)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.centralwidget)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.code = QtWidgets.QPlainTextEdit(self.centralwidget)
-        self.code.setEnabled(True)
-        self.code.setMaximumSize(QtCore.QSize(1677000, 16777215))
-        font = QtGui.QFont()
-        font.setFamily("DejaVu Sans Mono")
-        font.setPointSize(8)
-        self.code.setFont(font)
-        self.code.setLineWrapMode(QtWidgets.QPlainTextEdit.NoWrap)
-        self.code.setObjectName("code")
-        self.horizontalLayout.addWidget(self.code)
+        self.project_view = QtWidgets.QTreeView(self.centralwidget)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.project_view.sizePolicy().hasHeightForWidth())
+        self.project_view.setSizePolicy(sizePolicy)
+        self.project_view.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.project_view.setProperty("showDropIndicator", False)
+        self.project_view.setAlternatingRowColors(False)
+        self.project_view.setObjectName("project_view")
+        self.horizontalLayout.addWidget(self.project_view)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
         self.horizontalGroupBox = QtWidgets.QGroupBox(self.centralwidget)
@@ -410,7 +411,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addWidget(self.groupBox_2)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1351, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1075, 22))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
