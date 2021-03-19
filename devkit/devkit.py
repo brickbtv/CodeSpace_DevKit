@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List
 
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import QTimer, Qt, QEvent, QCoreApplication, QMutex
+from PyQt5.QtCore import QTimer, Qt, QEvent, QCoreApplication
 from PyQt5.QtGui import QImage, QPixmap, qRgb
 from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QDesktopWidget
 
@@ -28,10 +28,6 @@ class EmulationState(Enum):
     RUN_FAST = 4
 
 
-class DevKitMode(Enum):
-    ASM = 1
-
-
 class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     emulator = None
     image = None
@@ -39,7 +35,6 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     emulator_state = EmulationState.INITIAL
     timers = []
     mode = None
-    close_mutex = QMutex()
 
     def __init__(self, project_file):
         super().__init__()
@@ -55,7 +50,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.project_view_model = QtGui.QStandardItemModel()
         self.project_view_model.setHorizontalHeaderLabels(['Name'])
         self.project_view.setModel(self.project_view_model)
-        self.project_view.doubleClicked.connect(self.select_file_to_edit)
+        self.project_view.doubleClicked.connect(self.project_tree_double_click)
+
+        self.editor_tabs.tabCloseRequested.connect(self.close_source_file)
 
         if project_file:
             self.project = Project.load_from_file(project_file)
@@ -79,28 +76,32 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.speed_changed()
         self.speed.currentIndexChanged.connect(self.speed_changed)
 
-    def select_file_to_edit(self, index):
+    def project_tree_double_click(self, index):
         item = self.project_view.selectedIndexes()[0]
 
         filename = item.model().itemFromIndex(index).text()
+        self.open_source_file_in_editor(filename)
+        self.editor_tabs.setCurrentWidget(self.editor_windows[filename])
 
+    def open_source_file_in_editor(self, filename):
         if filename in self.editor_windows:
             self.editor_windows[filename].activateWindow()
             return
 
-        editor_window = EditorWindow(self.project.location, filename, self.remove_editor_window)
+        editor_window = EditorWindow(self.project.location, filename)
         editor_window.show()
+
+        self.editor_tabs.addTab(editor_window, filename)
 
         self.editor_windows[filename] = editor_window
 
-    def remove_editor_window(self, filename):
-        if self.close_mutex.tryLock() is False:
-            return
+    def close_source_file(self, index):
+        editor: EditorWindow = self.editor_tabs.widget(index)
+        editor.close()
 
-        if filename in self.editor_windows:
-            self.editor_windows.pop(filename)
+        self.editor_windows.pop(editor.filename, None)
 
-        self.close_mutex.unlock()
+        self.editor_tabs.removeTab(index)
 
     def move_window_to_center(self):
         center_point = QDesktopWidget().availableGeometry().center()
@@ -112,6 +113,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.project_view_model.setRowCount(0)
         for filename in self.project.files:
             self.project_view_model.appendRow(QtGui.QStandardItem(filename))
+
+        while self.editor_tabs.count():
+            self.editor_tabs.removeTab(0)
 
     def setup_keyboard(self):
         self.keyboard.installEventFilter(self)
@@ -254,11 +258,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         return super().eventFilter(source, event)
 
     def closeEvent(self, event):
-        self.close_mutex.lock()
         for editor in self.editor_windows.values():
             editor.close()
-
-        self.close_mutex.unlock()
 
     def retranslate(self):
         try:
@@ -267,12 +268,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             QMessageBox.warning(self, 'Translation Error', str(ex))
 
     def _retranslate(self):
-
         # save all changes
         for editor in self.editor_windows.values():
             editor.save_file()
-
-
 
         self.pc_to_line = {}
 
@@ -497,8 +495,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 except:
                     break
 
-                if select_file in self.editor_windows:
-                    self.editor_windows[select_file].select_line(select_line)
+                if select_file not in self.editor_windows:
+                    self.open_source_file_in_editor(select_file)
+
+                self.editor_windows[select_file].select_line(select_line)
+                self.editor_tabs.setCurrentWidget(self.editor_windows[select_file])
 
                 QCoreApplication.processEvents()
                 break

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1075</width>
-    <height>887</height>
+    <width>1449</width>
+    <height>873</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -32,6 +32,38 @@
       <property name="alternatingRowColors">
        <bool>false</bool>
       </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QTabWidget" name="editor_tabs">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="minimumSize">
+       <size>
+        <width>400</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <property name="tabsClosable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="tab_5">
+       <attribute name="title">
+        <string>Tab 1</string>
+       </attribute>
+      </widget>
+      <widget class="QWidget" name="tab_6">
+       <attribute name="title">
+        <string>Tab 2</string>
+       </attribute>
+      </widget>
      </widget>
     </item>
     <item>
@@ -259,6 +291,12 @@
     </item>
     <item>
      <widget class="QGroupBox" name="groupBox_2">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
       <property name="title">
        <string>Ship</string>
       </property>
@@ -1014,7 +1052,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1075</width>
+     <width>1449</width>
      <height>22</height>
     </rect>
    </property>
