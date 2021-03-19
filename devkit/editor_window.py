@@ -1,7 +1,7 @@
 import os
 
 from PyQt5 import QtGui
-from PyQt5.QtCore import QPoint
+from PyQt5.QtCore import QPoint, QObject
 from PyQt5.QtGui import QKeySequence, QTextCursor
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QShortcut
 
@@ -15,11 +15,11 @@ class EditorWindow(QWidget):
     """
     def __init__(self, workdir, filename, close_cback):
         super().__init__()
-        self.setWindowTitle(filename)
         self.layout = QVBoxLayout()
 
         self.pc_to_line = {}
         self.hl = None
+        self.highligh_pass = False
         self.filename = filename
         self.close_cback = close_cback
 
@@ -30,6 +30,21 @@ class EditorWindow(QWidget):
         self.setLayout(self.layout)
 
         self.resize(400, 1000)
+
+        self.code.textChanged.connect(self.set_changed_state)
+
+        self.set_not_changed_changed_state()
+
+    def set_changed_state(self):
+        if not self.highligh_pass:
+            # first change is always highlight pass
+            self.highligh_pass = True
+            return
+
+        self.setWindowTitle(f'{self.filename} - CHANGED ')
+
+    def set_not_changed_changed_state(self):
+        self.setWindowTitle(self.filename)
 
     def setup_code_editor(self, filename):
         """ Replaces basic text editor widget by custom code editor widget """
@@ -79,3 +94,5 @@ class EditorWindow(QWidget):
         data = self.code.toPlainText()
         with open(self.file_full, 'w') as f:
             f.write(data)
+
+        self.set_not_changed_changed_state()

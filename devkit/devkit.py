@@ -280,11 +280,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         bin_location = os.path.join(self.project.location, f'{self.project.name}.bin')
         with open(bin_location, 'wb') as f:
             pc = 0
-            for line_num, _, instructions in tr.asm2bin(self.project.location, self.project.main_file):
+            for file, line_num, _, instructions in tr.asm2bin(self.project.location, self.project.main_file):
                 for code in instructions:
                     f.write(code.to_bytes(2, byteorder='little'))
                     # TODO: refactor this
-                self.pc_to_line[pc] = line_num
+                self.pc_to_line[pc] = (file, line_num)
                 pc += len(instructions)
 
         self.emulator.preload(bin_location)
@@ -300,8 +300,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         translator = DCPUTranslator()
         try:
             pc = 0
-            for line_num, line, instructions in translator.asm2bin(self.project.location, self.project.main_file):
-                self.pc_to_line[pc] = line_num
+            for file, line_num, line, instructions in translator.asm2bin(self.project.location, self.project.main_file):
+                self.pc_to_line[pc] = (file, line_num)
                 pc += len(instructions)
 
         except Exception as ex:
@@ -493,12 +493,12 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 self._dump_registers()
 
                 try:
-                    selectline = self.pc_to_line[pc]
+                    select_file, select_line = self.pc_to_line[pc]
                 except:
                     break
 
-                if self.project.main_file in self.editor_windows:
-                    self.editor_windows[self.project.main_file].select_line(selectline)
+                if select_file in self.editor_windows:
+                    self.editor_windows[select_file].select_line(select_line)
 
                 QCoreApplication.processEvents()
                 break

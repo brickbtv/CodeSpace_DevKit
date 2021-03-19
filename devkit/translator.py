@@ -135,8 +135,8 @@ class DCPUTranslator:
                 if line.startswith('.include '):
                     include_file = line[len('.include '):].strip()
                     include_file = include_file[1:-1]
-                    for _, __, cmd, param1, param2 in self.gen_lines(workdir, include_file):
-                        yield line_num, line, cmd, param1, param2
+                    for inc_filename, inc_linenum, inc_line, cmd, param1, param2 in self.gen_lines(workdir, include_file):
+                        yield inc_filename, inc_linenum, inc_line, cmd, param1, param2
 
                     continue
 
@@ -144,14 +144,14 @@ class DCPUTranslator:
                     other_command = line.find(' ')
 
                     if other_command != -1:
-                        yield line_num, line, '__LABEL', line.strip()[1:other_command], None
+                        yield filename, line_num, line, '__LABEL', line.strip()[1:other_command], None
                         line = line[other_command:]
                     else:
-                        yield line_num, line, '__LABEL', line.strip()[1:], None
+                        yield filename, line_num, line, '__LABEL', line.strip()[1:], None
                         continue
 
                 cmd, param1, param2 = self.parse_line(line)
-                yield line_num, line, cmd, param1, param2
+                yield filename, line_num, line, cmd, param1, param2
 
     def asm2bin(self, workdir, filename):
         relocations, _ = self.translate(workdir, filename, relocations_info=None)
@@ -168,7 +168,7 @@ class DCPUTranslator:
         program = []
 
         label_pc = 0
-        for line_num, line, cmd, param1, param2 in self.gen_lines(workdir, filename):
+        for resolver_filename, line_num, line, cmd, param1, param2 in self.gen_lines(workdir, filename):
             try:
                 # pseudo command for symbol names translation
                 if cmd == '__LABEL':
@@ -194,7 +194,7 @@ class DCPUTranslator:
                                 instructions.append(ord(c))
 
                     if instructions:
-                        program.append((line_num, line, instructions))
+                        program.append((resolver_filename, line_num, line, instructions))
 
                     label_pc += len(instructions)
 
@@ -222,11 +222,11 @@ class DCPUTranslator:
                 if nw1 is not None:
                     instructions.append(nw1)
 
-                program.append((line_num, line, instructions))
+                program.append((resolver_filename, line_num, line, instructions))
 
                 label_pc += len(instructions)
             except Exception as ex:
-                raise Exception(f'LINE: {line_num}     {line}    ERROR: {ex}')
+                raise Exception(f'FILE: {resolver_filename}    LINE:  {line_num}     {line}    ERROR: {ex}')
 
         return labels_addr, program
 
@@ -242,7 +242,7 @@ if __name__ == '__main__':
     if args.debug:
         print('PC     HEX    BIN                ASM')
         pc = 0
-        for line_num, line, instructions in translator.asm2bin('', args.filename):
+        for _, line_num, line, instructions in translator.asm2bin('', args.filename):
             for instruction_num, code in enumerate(instructions):
                 if instruction_num == 0:
                     print('0x{:04x}'.format(pc), '0x{:04x}'.format(code), '0x{:016b}'.format(code), line)
@@ -254,7 +254,7 @@ if __name__ == '__main__':
     if args.output:
         print('Translation started')
         with open(args.output, 'wb') as f:
-            for line, instructions in translator.asm2bin('', args.filename):
+            for _, __, line, instructions in translator.asm2bin('', args.filename):
                 for code in instructions:
                     f.write(code.to_bytes(2, byteorder='little'))
 
