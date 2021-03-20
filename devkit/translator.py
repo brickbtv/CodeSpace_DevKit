@@ -51,6 +51,14 @@ class OperandType(Enum):
         return OperandType.UNKNOWN
 
 
+class TranslationError(Exception):
+    def __init__(self, file, line, message):
+        super().__init__()
+        self.file = file
+        self.line = line
+        self.message = message
+
+
 class DCPUTranslator:
     """ .dcpu16 -> .bin """
 
@@ -226,7 +234,11 @@ class DCPUTranslator:
 
                 label_pc += len(instructions)
             except Exception as ex:
-                raise Exception(f'FILE: {resolver_filename}    LINE:  {line_num}     {line}    ERROR: {ex}')
+                raise TranslationError(
+                    resolver_filename,
+                    line_num,
+                    f'FILE: {resolver_filename}    LINE:  {line_num}     {line}    ERROR: {ex}',
+                )
 
         return labels_addr, program
 

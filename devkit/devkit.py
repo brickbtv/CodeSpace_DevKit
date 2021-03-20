@@ -18,7 +18,7 @@ from hardware import Keyboard, Sensor, Door, DockingClamp, Antenna, Clock
 import devkit_ui
 
 from project.project import Project
-from translator import DCPUTranslator
+from translator import DCPUTranslator, TranslationError
 
 
 class EmulationState(Enum):
@@ -331,8 +331,11 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     def retranslate(self):
         try:
             self._retranslate()
+        except TranslationError as err:
+            self.select_line_in_editor(err.file, err.line)
+            QMessageBox.warning(self, 'Translation Error', err.message)
         except Exception as ex:
-            QMessageBox.warning(self, 'Translation Error', str(ex))
+            QMessageBox.warning(self, 'Unknown Translation Error', str(ex))
 
     def _retranslate(self):
         # save all changes
@@ -561,16 +564,18 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
                 except:
                     break
 
-                if select_file not in self.editor_windows:
-                    self.open_source_file_in_editor(select_file)
-
-                self.editor_windows[select_file].select_line(select_line)
-                self.editor_tabs.setCurrentWidget(self.editor_windows[select_file])
+                self.select_line_in_editor(select_file, select_line)
 
                 QCoreApplication.processEvents()
                 break
 
         self._dump_registers()
+
+    def select_line_in_editor(self, select_file, select_line):
+        if select_file not in self.editor_windows:
+            self.open_source_file_in_editor(select_file)
+        self.editor_windows[select_file].select_line(select_line)
+        self.editor_tabs.setCurrentWidget(self.editor_windows[select_file])
 
     def _dump_registers(self):
         for i, reg in enumerate(['A', 'B', 'C', 'X', 'Y', 'Z', 'I', 'J', 'SP', 'PC', 'EX', 'IA']):
