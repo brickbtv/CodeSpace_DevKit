@@ -237,7 +237,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def setup_hardware(self):
         timer = QTimer(self)
-        timer.setInterval(200)
+        timer.setInterval(16)
         timer.timeout.connect(self.update_hardware_ui)
         timer.start()
         self.timers.append(timer)
@@ -591,7 +591,6 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         labels, _ = tr.translate(self.project.location, self.project.main_file, None, dat_labels)
 
         self.variables.setRowCount(0)
-
 
         for k in sorted(labels.keys()):
             if k in dat_labels:
