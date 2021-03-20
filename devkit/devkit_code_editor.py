@@ -7,7 +7,7 @@
 from PyQt5.QtCore import Qt, QRect, QSize, QRegExp
 from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
 from PyQt5.QtGui import QColor, QPainter, QTextFormat, QTextCharFormat, QFont, \
-    QSyntaxHighlighter
+    QSyntaxHighlighter, QGuiApplication, QTextCursor
 
 from constants import MNEMONIC_TO_CODE, SPECIAL_MNEMONICS_TO_CODE
 
@@ -25,8 +25,11 @@ class QLineNumberArea(QWidget):
 
 
 class QCodeEditor(QPlainTextEdit):
-    def __init__(self, parent=None, pc_to_line=None, editmode=False):
+    def __init__(self, parent=None, pc_to_line=None, editmode=False, click_cback=None):
         super().__init__(parent)
+
+        self.click_cback = click_cback
+
         self.lineNumberArea = QLineNumberArea(self)
         self.blockCountChanged.connect(self.updateLineNumberAreaWidth)
         self.updateRequest.connect(self.updateLineNumberArea)
@@ -64,6 +67,12 @@ class QCodeEditor(QPlainTextEdit):
         self.lineNumberArea.setGeometry(QRect(cr.left(), cr.top(), self.lineNumberAreaWidth(), cr.height()))
 
     def highlightCurrentLine(self):
+        if self.click_cback:
+            if QGuiApplication.keyboardModifiers() == Qt.ControlModifier:
+                cursor = self.textCursor()
+                cursor.select(QTextCursor.WordUnderCursor)
+                self.click_cback(cursor.selectedText())
+
         extraSelections = []
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()

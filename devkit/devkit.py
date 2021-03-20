@@ -1,6 +1,7 @@
 import argparse
 import os
 import sys
+import time
 from enum import Enum
 from functools import partial
 from pathlib import Path
@@ -40,6 +41,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def __init__(self, project_file):
         super().__init__()
+
+        self.last_go_to_definition = time.time()
 
         self.next_instruction = None
         self.project_file = project_file
@@ -142,12 +145,24 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.editor_windows[filename].activateWindow()
             return
 
-        editor_window = EditorWindow(self.project.location, filename)
+        editor_window = EditorWindow(self.project.location, filename, self.go_to_definition)
         editor_window.show()
 
         self.editor_tabs.addTab(editor_window, filename)
 
         self.editor_windows[filename] = editor_window
+
+    def go_to_definition(self, text):
+        if time.time() - self.last_go_to_definition < 1:
+            return
+
+        self.last_go_to_definition = time.time()
+        for file in self.project.files:
+            with open(os.path.join(self.project.location, file), 'r') as f:
+                for line_num, line in enumerate(f.readlines()):
+                    if line.strip().split(' ')[0] == f':{text}':
+                        self.select_line_in_editor(file, line_num)
+                        return
 
     def close_source_file(self, index):
         editor: EditorWindow = self.editor_tabs.widget(index)

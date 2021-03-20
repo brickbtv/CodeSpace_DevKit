@@ -13,7 +13,7 @@ class EditorWindow(QWidget):
     This "window" is a QWidget. If it has no parent, it
     will appear as a free-floating window as we want.
     """
-    def __init__(self, workdir, filename):
+    def __init__(self, workdir, filename, click_cback):
         super().__init__()
         self.layout = QVBoxLayout()
 
@@ -21,6 +21,7 @@ class EditorWindow(QWidget):
         self.hl = None
         self.highligh_pass = False
         self.filename = filename
+        self.click_cback = click_cback
 
         self.file_full = os.path.join(workdir, filename)
         self.code = self.setup_code_editor(self.file_full)
@@ -31,7 +32,7 @@ class EditorWindow(QWidget):
     def setup_code_editor(self, filename):
         """ Replaces basic text editor widget by custom code editor widget """
 
-        better_code = QCodeEditor(self, self.pc_to_line, True)
+        better_code = QCodeEditor(self, self.pc_to_line, True, self.click_cback)
 
         font = QtGui.QFont()
         font.setFamily('Monospace')
