@@ -17,7 +17,7 @@ class Project:
 
     def save(self):
         with self.description_path.open('w') as f:
-            json.dump(self.data, f)
+            json.dump(self.data, f, indent=4)
 
     def load(self):
         with self.description_path.open('r') as f:
@@ -34,10 +34,15 @@ class Project:
         return project
 
     def add_file(self, filename):
+        if filename in self.data['files']:
+            return
+
         self.data['files'].append(filename)
+        if len(self.data['files']) == 1:
+            self.main_file = filename
 
     def remove_file(self, filename):
-        self.data['files'].append(filename)
+        self.data['files'].remove(filename)
 
     @property
     def main_file(self) -> str:

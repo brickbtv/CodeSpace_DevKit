@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import List
 
 from PyQt5 import QtWidgets, QtGui
-from PyQt5.QtCore import QTimer, Qt, QEvent, QCoreApplication
+from PyQt5.QtCore import QTimer, Qt, QEvent, QCoreApplication, QPoint
 from PyQt5.QtGui import QImage, QPixmap, qRgb, QPalette, QColor, QIcon
-from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QDesktopWidget
+from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QDesktopWidget, QMenu, QAction
 
+from create_project_window import CreateProjectWindow
 from editor_window import EditorWindow
 from emulator import Emulator
 from hardware import Keyboard, Sensor, Door, DockingClamp, Antenna, Clock
@@ -60,6 +61,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.setup_hardware()
 
         # menu buttons
+        self.actionCreateProject.triggered.connect(self.action_create_project)
         self.actionOpenBinFile.triggered.connect(self.action_open_file)
         self.actionStep.triggered.connect(self.action_step)
         self.actionRun.triggered.connect(self.action_run)
@@ -75,7 +77,57 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.project_view_model.setHorizontalHeaderLabels(['Name'])
         self.project_view.setModel(self.project_view_model)
         self.project_view.doubleClicked.connect(self.project_tree_double_click)
+
+        self.project_view.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.project_view.customContextMenuRequested.connect(self.project_tree_context_menu)
+
         self.editor_tabs.tabCloseRequested.connect(self.close_source_file)
+
+    def project_tree_context_menu(self, point: QPoint):
+        index = self.project_view.indexAt(point)
+        if index.isValid():
+            menu = QMenu()
+            set_action = menu.addAction('Set as Main')
+            remove_action = menu.addAction('Remove File')
+
+            filename = self.project_view_model.itemFromIndex(index).text()
+
+            res = menu.exec(self.project_view.viewport().mapToGlobal(point))
+            if res not in {set_action, remove_action}:
+                return
+
+            if res == set_action:
+                self.project.main_file = filename
+                self.project.save()
+                self.setup_project_tree()
+
+            if res == remove_action:
+                self.project.remove_file(filename)
+                self.project.save()
+                self.setup_project_tree()
+        else:
+            menu = QMenu()
+            add_action = menu.addAction('Add File')
+
+            res = menu.exec(self.project_view.viewport().mapToGlobal(point))
+
+            if res != add_action:
+                return
+
+            home_dir = str(self.project.location)
+            filename = QFileDialog.getOpenFileName(
+                self, 'Open file', home_dir, 'code files (*.asm *.dasm)', options=QFileDialog.DontUseNativeDialog,
+            )
+
+            if not filename or not filename[0]:
+                return
+
+            sourcefile = os.path.relpath(filename[0], self.project.location)
+
+            self.project.add_file(sourcefile)
+            self.project.save()
+            self.setup_project_tree()
+
 
     def project_tree_double_click(self, index):
         item = self.project_view.selectedIndexes()[0]
@@ -115,12 +167,15 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         icon_main_file = QIcon(os.path.join('img', 'main_asm_file.png'))
 
         self.project_view_model.setRowCount(0)
+        self.project_view.setRootIsDecorated(False)
         for filename in self.project.files:
             icon = icon_main_file if self.project.main_file == filename else icon_file
             self.project_view_model.appendRow(QtGui.QStandardItem(icon, filename))
 
         while self.editor_tabs.count():
             self.editor_tabs.removeTab(0)
+
+        self.editor_windows.clear()
 
     def setup_keyboard(self):
         self.keyboard.installEventFilter(self)
@@ -153,7 +208,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.display.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
 
         timer = QTimer(self)
-        timer.setInterval(200)
+        timer.setInterval(16)
         timer.timeout.connect(self.draw_display)
         timer.start()
         self.timers.append(timer)
@@ -188,6 +243,13 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def speed_changed(self):
         self.speed_multiplier = 10 ** self.speed.currentIndex()
+
+    def action_create_project(self):
+        self.create_project_window = CreateProjectWindow()
+        self.create_project_window.exec_()
+        if self.create_project_window.success:
+            self.project = Project.load_from_file(self.create_project_window.project_location)
+            self.setup_project_tree()
 
     def action_open_file(self):
         home_dir = str(Path.home())
@@ -297,7 +359,6 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             saves PC-to-instruction info.
         """
         self.pc_to_line = {}
-        self.lines = []
 
         # translate and then load
         translator = DCPUTranslator()
