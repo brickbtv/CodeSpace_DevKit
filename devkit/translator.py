@@ -167,7 +167,7 @@ class DCPUTranslator:
 
         return program
 
-    def translate(self, workdir, filename, relocations_info=None):
+    def translate(self, workdir, filename, relocations_info=None, dat_labels_out=None):
         if relocations_info is None:
             relocations_info = self.extract_labels(workdir, filename)
 
@@ -176,14 +176,23 @@ class DCPUTranslator:
         program = []
 
         label_pc = 0
+        prev_cmd = ''
+        prev_label = ''
         for resolver_filename, line_num, line, cmd, param1, param2 in self.gen_lines(workdir, filename):
             try:
                 # pseudo command for symbol names translation
                 if cmd == '__LABEL':
                     labels_addr[param1] = label_pc
+                    if dat_labels_out is not None:
+                        prev_label = param1
+                        prev_cmd = cmd
                     continue
 
                 if cmd == 'DAT':
+                    # store DAT labels
+                    if prev_cmd == '__LABEL' and dat_labels_out is not None:
+                        dat_labels_out.append(prev_label)
+
                     instructions = []
 
                     params = [param1, param2]
@@ -233,6 +242,8 @@ class DCPUTranslator:
                 program.append((resolver_filename, line_num, line, instructions))
 
                 label_pc += len(instructions)
+
+                prev_cmd = cmd
             except Exception as ex:
                 raise TranslationError(
                     resolver_filename,

@@ -9,7 +9,8 @@ from typing import List
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import QTimer, Qt, QEvent, QCoreApplication, QPoint
 from PyQt5.QtGui import QImage, QPixmap, qRgb, QPalette, QColor, QIcon
-from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QDesktopWidget, QMenu, QAction
+from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QDesktopWidget, QMenu, QAction, \
+    QTableWidgetItem
 
 from create_project_window import CreateProjectWindow
 from editor_window import EditorWindow
@@ -263,7 +264,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.action_reset()
 
     def action_step(self):
-        self.retranslate()
+        if not self.emulator.regs.PC != 0:
+            self.retranslate()
 
         self.emulator_state = EmulationState.STEP_REQUESTED
         self.actionReset.setEnabled(True)
@@ -345,6 +347,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.pc_to_line = {}
 
         tr = DCPUTranslator()
+
         bin_location = os.path.join(self.project.location, f'{self.project.name}.bin')
         with open(bin_location, 'wb') as f:
             pc = 0
@@ -581,6 +584,22 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         for i, reg in enumerate(['A', 'B', 'C', 'X', 'Y', 'Z', 'I', 'J', 'SP', 'PC', 'EX', 'IA']):
             item = self.registers.item(i, 0)
             item.setText(f'0x{self.emulator.regs[reg]:04x}')
+
+        # variables hack
+        tr = DCPUTranslator()
+        dat_labels = []
+        labels, _ = tr.translate(self.project.location, self.project.main_file, None, dat_labels)
+
+        self.variables.setRowCount(0)
+
+
+        for k in sorted(labels.keys()):
+            if k in dat_labels:
+                value = labels[k]
+                row_position = self.variables.rowCount()
+                self.variables.insertRow(row_position)
+                self.variables.setItem(row_position, 0, QTableWidgetItem(k))
+                self.variables.setItem(row_position, 1, QTableWidgetItem(f'0x{self.emulator.ram[value]:04x}'))
 
 
 def force_dark_mode():
