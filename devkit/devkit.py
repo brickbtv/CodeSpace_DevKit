@@ -132,7 +132,6 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.project.save()
             self.setup_project_tree()
 
-
     def project_tree_double_click(self, index):
         item = self.project_view.selectedIndexes()[0]
 
