@@ -8,7 +8,7 @@ from typing import List
 
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import QTimer, Qt, QEvent, QCoreApplication
-from PyQt5.QtGui import QImage, QPixmap, qRgb
+from PyQt5.QtGui import QImage, QPixmap, qRgb, QPalette, QColor, QIcon
 from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QDesktopWidget
 
 from editor_window import EditorWindow
@@ -46,13 +46,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.setupUi(self)
         self.move_window_to_center()
 
-        # project tree
-        self.project_view_model = QtGui.QStandardItemModel()
-        self.project_view_model.setHorizontalHeaderLabels(['Name'])
-        self.project_view.setModel(self.project_view_model)
-        self.project_view.doubleClicked.connect(self.project_tree_double_click)
-
-        self.editor_tabs.tabCloseRequested.connect(self.close_source_file)
+        self.setup_editor()
 
         if project_file:
             self.project = Project.load_from_file(project_file)
@@ -75,6 +69,13 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.speed_multiplier = 1
         self.speed_changed()
         self.speed.currentIndexChanged.connect(self.speed_changed)
+
+    def setup_editor(self):
+        self.project_view_model = QtGui.QStandardItemModel()
+        self.project_view_model.setHorizontalHeaderLabels(['Name'])
+        self.project_view.setModel(self.project_view_model)
+        self.project_view.doubleClicked.connect(self.project_tree_double_click)
+        self.editor_tabs.tabCloseRequested.connect(self.close_source_file)
 
     def project_tree_double_click(self, index):
         item = self.project_view.selectedIndexes()[0]
@@ -110,9 +111,13 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.move(rect.topLeft())
 
     def setup_project_tree(self):
+        icon_file = QIcon(os.path.join('img', 'asm_file.png'))
+        icon_main_file = QIcon(os.path.join('img', 'main_asm_file.png'))
+
         self.project_view_model.setRowCount(0)
         for filename in self.project.files:
-            self.project_view_model.appendRow(QtGui.QStandardItem(filename))
+            icon = icon_main_file if self.project.main_file == filename else icon_file
+            self.project_view_model.appendRow(QtGui.QStandardItem(icon, filename))
 
         while self.editor_tabs.count():
             self.editor_tabs.removeTab(0)
@@ -512,12 +517,34 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             item.setText(f'0x{self.emulator.regs[reg]:04x}')
 
 
+def force_dark_mode():
+    palette = QPalette()
+    palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    palette.setColor(QPalette.WindowText, Qt.white)
+    palette.setColor(QPalette.Base, QColor(25, 25, 25))
+    palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    palette.setColor(QPalette.ToolTipBase, Qt.black)
+    palette.setColor(QPalette.ToolTipText, Qt.white)
+    palette.setColor(QPalette.Text, Qt.white)
+    palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    palette.setColor(QPalette.ButtonText, Qt.white)
+    palette.setColor(QPalette.BrightText, Qt.red)
+    palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+    palette.setColor(QPalette.HighlightedText, Qt.black)
+    app.setPalette(palette)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--project-file')
     args = parser.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
+
+    app.setStyle("Fusion")
+    force_dark_mode()
+
     window = DevKitApp(args.project_file)
     window.show()
     app.exec_()

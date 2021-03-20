@@ -67,7 +67,7 @@ class QCodeEditor(QPlainTextEdit):
         extraSelections = []
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
-            lineColor = QColor(Qt.yellow).lighter(160)
+            lineColor = QColor(Qt.darkYellow).lighter(80)
             selection.format.setBackground(lineColor)
             selection.format.setProperty(QTextFormat.FullWidthSelection, True)
             selection.cursor = self.textCursor()
@@ -84,7 +84,7 @@ class QCodeEditor(QPlainTextEdit):
     def _lineNumberAreaPaintEvent(self, event):
         painter = QPainter(self.lineNumberArea)
 
-        painter.fillRect(event.rect(), Qt.lightGray)
+        painter.fillRect(event.rect(), Qt.darkGray)
 
         block = self.firstVisibleBlock()
         blockNumber = block.blockNumber()
@@ -130,7 +130,7 @@ def format(color, style=''):
 STYLES = {
     'keyword': format('blue'),
     'operator': format('red'),
-    'brace': format('black', 'bold'),
+    'brace': format('darkGrey', 'bold'),
     'label': format('magenta'),
     'comment': format('darkGreen', 'italic'),
     'numbers': format('brown'),
