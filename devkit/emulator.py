@@ -357,6 +357,11 @@ class Emulator:
     @instruction
     def hwq(self, _, __, a):
         hwnum = a
+
+        if hwnum >= len(self.hardware):
+            print(f'Hardware ID {hwnum} is not exists.')
+            return
+
         hwid = self.hardware[hwnum].ID
         vendor = self.hardware[hwnum].VENDOR
 
@@ -370,6 +375,10 @@ class Emulator:
     @instruction
     def hwi(self, _, __, a):
         hwnum = a
+        if hwnum >= len(self.hardware):
+            print(f'Hardware ID {hwnum} is not exists.')
+            return
+
         device = self.hardware[hwnum]
         device.handle_interruption()
 

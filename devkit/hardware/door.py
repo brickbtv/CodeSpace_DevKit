@@ -72,13 +72,13 @@ class Door(Hardware):
         code = self.regs.A
         if code == 0:
             door = self.regs.I
-            if door > 3:
+            if door > 2:
                 return
 
             self.regs.B = (self.mode[door].value << 8) | self.state[door].value
         elif code == 1:
             door = self.regs.I
-            if door > 3:
+            if door > 2:
                 return
             self.mode[door] = self.Modes(self.regs.B)
         elif code == 2:

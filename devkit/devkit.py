@@ -264,7 +264,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.create_project_window.exec_()
         if self.create_project_window.success:
             self.project = Project.load_from_file(self.create_project_window.project_location)
+            self.project_file = self.create_project_window.project_location
             self.setup_project_tree()
+            self.action_reset()
 
     def action_open_file(self):
         home_dir = str(Path.home())
@@ -274,6 +276,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
         if filename and filename[0]:
             self.project = Project.load_from_file(filename[0])
+            self.project_file = filename[0]
             self.setup_project_tree()
             self.action_reset()
 
@@ -603,17 +606,21 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         # variables hack
         tr = DCPUTranslator()
         dat_labels = []
-        labels, _ = tr.translate(self.project.location, self.project.main_file, None, dat_labels)
+        try:
+            labels, _ = tr.translate(self.project.location, self.project.main_file, None, dat_labels)
 
-        self.variables.setRowCount(0)
+            self.variables.setRowCount(0)
 
-        for k in sorted(labels.keys()):
-            if k in dat_labels:
-                value = labels[k]
-                row_position = self.variables.rowCount()
-                self.variables.insertRow(row_position)
-                self.variables.setItem(row_position, 0, QTableWidgetItem(k))
-                self.variables.setItem(row_position, 1, QTableWidgetItem(f'0x{self.emulator.ram[value]:04x}'))
+            for k in sorted(labels.keys()):
+                if k in dat_labels:
+                    value = labels[k]
+                    row_position = self.variables.rowCount()
+                    self.variables.insertRow(row_position)
+                    self.variables.setItem(row_position, 0, QTableWidgetItem(k))
+                    self.variables.setItem(row_position, 1, QTableWidgetItem(f'0x{self.emulator.ram[value]:04x}'))
+        except TranslationError:
+            print('Failed to dump variables')
+            pass
 
 
 def force_dark_mode():
