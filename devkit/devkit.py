@@ -285,7 +285,8 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
         self.actionReset.setEnabled(True)
 
     def action_run(self):
-        self.retranslate()
+        if not self.emulator.regs.PC != 0:
+            self.retranslate()
 
         self.emulator_state = EmulationState.RUN_FAST
         self.actionReset.setEnabled(True)
