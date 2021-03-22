@@ -10,8 +10,7 @@ from typing import List
 from PyQt5 import QtWidgets, QtGui
 from PyQt5.QtCore import QTimer, Qt, QEvent, QCoreApplication, QPoint
 from PyQt5.QtGui import QImage, QPixmap, qRgb, QPalette, QColor, QIcon
-from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QDesktopWidget, QMenu, QAction, \
-    QTableWidgetItem
+from PyQt5.QtWidgets import QGraphicsScene, QLabel, QFileDialog, QMessageBox, QDesktopWidget, QMenu, QTableWidgetItem
 
 from create_project_window import CreateProjectWindow
 from editor_window import EditorWindow
@@ -79,9 +78,9 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
     def setup_editor(self):
         self.project_view_model = QtGui.QStandardItemModel()
         self.project_view_model.setHorizontalHeaderLabels(['Name'])
+
         self.project_view.setModel(self.project_view_model)
         self.project_view.doubleClicked.connect(self.project_tree_double_click)
-
         self.project_view.setContextMenuPolicy(Qt.CustomContextMenu)
         self.project_view.customContextMenuRequested.connect(self.project_tree_context_menu)
 
@@ -644,12 +643,14 @@ def force_dark_mode():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--project-file')
+    parser.add_argument('--dark-mode', action='store_true', default=False)
     args = parser.parse_args()
 
     app = QtWidgets.QApplication(sys.argv)
 
     app.setStyle("Fusion")
-    force_dark_mode()
+    if args.dark_mode:
+        force_dark_mode()
 
     window = DevKitApp(args.project_file)
     window.show()

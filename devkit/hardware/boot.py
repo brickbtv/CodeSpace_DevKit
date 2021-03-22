@@ -12,4 +12,4 @@ class Boot(Hardware):
         super().__init__(regs, ram)
 
     def handle_interruption(self):
-        print('Clock device not implemented')
+        print('Boot device not implemented')

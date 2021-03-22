@@ -61,8 +61,8 @@ class Door(Hardware):
     def __init__(self, regs: Registers, ram: RAM):
         super().__init__(regs, ram)
         # TODO: a variable amount of doors
-        self.mode = [Door.Modes.PROXIMITY, Door.Modes.PROXIMITY, Door.Modes.PROXIMITY]
-        self.state = [Door.States.DEFAULT, Door.States.DEFAULT, Door.States.DEFAULT]
+        self.mode = [Door.Modes.PROXIMITY, Door.Modes.PROXIMITY, Door.Modes.PROXIMITY, Door.Modes.PROXIMITY]
+        self.state = [Door.States.DEFAULT, Door.States.DEFAULT, Door.States.DEFAULT, Door.States.DEFAULT]
 
         self.irq_enabled = False
         self.irq_code = None
@@ -72,13 +72,13 @@ class Door(Hardware):
         code = self.regs.A
         if code == 0:
             door = self.regs.I
-            if door > 2:
+            if door > 3:
                 return
 
             self.regs.B = (self.mode[door].value << 8) | self.state[door].value
         elif code == 1:
             door = self.regs.I
-            if door > 2:
+            if door > 3:
                 return
             self.mode[door] = self.Modes(self.regs.B)
         elif code == 2:
