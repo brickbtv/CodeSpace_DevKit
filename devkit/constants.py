@@ -9,6 +9,7 @@ REGISTERS = {
     'J': 0x07,
     'PUSH': 0x18,
     'POP': 0x18,
+    'PEEK': 0x19,
     'SP': 0x1b,
     'PC': 0x1c,
     'EX': 0x1d,

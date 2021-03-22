@@ -61,8 +61,8 @@ class Door(Hardware):
     def __init__(self, regs: Registers, ram: RAM):
         super().__init__(regs, ram)
         # TODO: a variable amount of doors
-        self.mode = [Door.Modes.PROXIMITY, Door.Modes.PROXIMITY, Door.Modes.PROXIMITY]
-        self.state = [Door.States.DEFAULT, Door.States.DEFAULT, Door.States.DEFAULT]
+        self.mode = [Door.Modes.PROXIMITY, Door.Modes.PROXIMITY, Door.Modes.PROXIMITY, Door.Modes.PROXIMITY]
+        self.state = [Door.States.DEFAULT, Door.States.DEFAULT, Door.States.DEFAULT, Door.States.DEFAULT]
 
         self.irq_enabled = False
         self.irq_code = None
