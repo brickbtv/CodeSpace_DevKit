@@ -480,9 +480,10 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
             self.thruster6,
             self.thruster7,
         ]
-        for i, thruster in enumerate(self.emulator.hardware[:8]):
+        thruster = self.emulator.get_hardware_by_name('thruster')
+        for i in range(8):
             label: QLabel = thrusters[i]
-            label.setText(str(thruster.power))
+            label.setText(str(thruster.power[i]))
 
         # set keyboard buffer UI
         keyboard: Keyboard = self.emulator.get_hardware_by_name('keyboard')

@@ -57,7 +57,7 @@ class Emulator:
         self.on_interruption_now = False
 
         self.hardware = []
-        self.hardware.extend([Thruster(self.regs, self.ram) for _ in range(8)])
+        self.hardware.extend([Thruster(self.regs, self.ram)])
         self.hardware.extend([Boot(self.regs, self.ram)])
         self.hardware.extend([Display(self.regs, self.ram), Keyboard(self.regs, self.ram)])
         self.hardware.extend([Floppy(self.regs, self.ram)])
