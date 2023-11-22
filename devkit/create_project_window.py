@@ -59,11 +59,18 @@ class CreateProjectWindow(QDialog):
 
         if not name:
             QMessageBox.warning(self, 'Project name', 'Project name is required')
+            return
 
         if not location:
             QMessageBox.warning(self, 'Project name', 'Project location is required')
+            return
+
+        default_main_file = Path(location) / 'main.dasm'
+        with default_main_file.open('w') as f:
+            f.write(':start\n    SET PC, 0')
 
         proj = Project(location, name)
+        proj.add_file(default_main_file.name)
         proj.save()
 
         self.project_location = proj.description_path

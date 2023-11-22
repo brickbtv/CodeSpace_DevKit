@@ -295,7 +295,7 @@ class DevKitApp(QtWidgets.QMainWindow, devkit_ui.Ui_MainWindow):
 
     def action_reset(self):
         self.last_frame = []
-        if self.project_file is None:
+        if not self.project_file or not self.project.main_file:
             return
 
         self.emulator = Emulator(debug=False)
